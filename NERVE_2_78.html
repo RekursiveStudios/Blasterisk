@@ -1,0 +1,2742 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>NERVE — v2.78</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@600;700&display=swap');
+
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body { height:100%; overflow:hidden; background:#000; font-family:'Rajdhani',sans-serif; touch-action:none; }
+  #wrap { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; background:#000; }
+  canvas { display:block; background:#0a0612; image-rendering:pixelated; }
+
+  /* HUD */
+  #hud { position:absolute; inset:0; pointer-events:none; font-family:'Orbitron',sans-serif; }
+  .hudtxt { text-shadow:0 0 6px rgba(0,255,200,.6), 1px 1px 0 #000, -1px 1px 0 #000; }
+
+  #topL { position:absolute; top:42px; left:14px; }
+  #energyLbl { color:#ffcf3a; font-size:13px; letter-spacing:2px; font-weight:700; }
+  #coinBox { display:flex; align-items:center; gap:7px; margin-bottom:9px; }
+  #coinIcon { color:#ffd23a; font-size:22px; line-height:1; text-shadow:0 0 12px #ffae00; }
+  #coinVal { color:#fff; font-size:28px; font-weight:900; line-height:1; text-shadow:0 0 10px #ffae00;
+             font-variant-numeric:tabular-nums; display:inline-block; transform-origin:left center; }
+  #energyBar { width:160px; height:14px; border:2px solid #0ff; background:rgba(0,40,60,.5);
+               margin-top:3px; box-shadow:0 0 8px #0ff; }
+  #energyFill { height:100%; width:100%; background:linear-gradient(90deg,#0ff,#0f8);
+                box-shadow:0 0 10px #0ff inset; transition:width .15s; }
+  #posBlock { margin-top:8px; }
+  #posLbl,#lapLbl { color:#ff48c4; font-size:12px; letter-spacing:2px; font-weight:700; }
+  #posVal { color:#fff; font-size:42px; font-weight:900; line-height:.9; text-shadow:0 0 12px #ff48c4; }
+  #lapLbl { color:#7fd; margin-left:6px; }
+  #lapVal { color:#fff; font-size:16px; }
+
+  #topC { position:absolute; top:44px; left:0; right:0; display:flex; justify-content:center;
+          align-items:center; gap:30px; pointer-events:none; text-align:center; }
+  #timeVal, #kphVal { font-variant-numeric:tabular-nums; font-feature-settings:"tnum"; }
+  #timeLbl { color:#ffcf3a; font-size:12px; letter-spacing:2px; font-weight:700; }
+  #timeVal { color:#0ff; font-size:26px; font-weight:900; text-shadow:0 0 10px #0ff; }
+  #kphVal { color:#fff; font-size:46px; font-weight:900; line-height:.85; text-shadow:0 0 14px #0ff; }
+  #kphLbl { color:#0ff; font-size:14px; letter-spacing:3px; }
+
+  #center { position:absolute; top:38%; left:50%; transform:translate(-50%,-50%); text-align:center;
+            color:#0ff; font-size:14px; letter-spacing:3px; }
+  .ranklbl { opacity:.8; margin:2px 0; text-shadow:0 0 6px #0ff; }
+
+  #moveTxt { position:absolute; top:60%; left:50%; transform:translate(-50%,-50%);
+             font-family:'Orbitron'; font-size:40px; font-weight:900; color:#9dff3a;
+             text-shadow:0 0 18px #9dff3a, 3px 3px 0 #000; opacity:0; letter-spacing:2px;
+             transition:opacity .2s; }
+  #moveTxt.show { opacity:1; }
+
+  /* Controls */
+  .ctrl { position:absolute; bottom:0; width:34%; height:50%; pointer-events:auto;
+          display:flex; align-items:flex-end; justify-content:center; padding-bottom:48px; }
+  #left { left:0; justify-content:flex-start; padding-left:24px; } #right { right:0; justify-content:flex-end; padding-right:24px; padding-bottom:26px; }
+  .ctrl .arrow { width:84px; height:84px; border-radius:50%; border:3px solid rgba(0,255,255,.5);
+                 background:rgba(0,40,60,.35); display:flex; align-items:center; justify-content:center;
+                 font-size:38px; color:#0ff; box-shadow:0 0 16px rgba(0,255,255,.3); }
+  .ctrl:active .arrow { background:rgba(0,255,255,.3); transform:scale(.94); }
+  .ctrl, .ctrl .arrow, #boost, #jump {
+    -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; }   /* no text-selection handles/menu on controls — size-sensing stays (gesture detect ≠ selection) */
+  .ctrl .arrow.fire { border-color:rgba(255,80,110,.6); background:rgba(60,0,18,.35); box-shadow:0 0 16px rgba(255,80,110,.35); gap:7px; }
+  .ctrl .arrow.fire .fbar { width:6px; height:34px; border-radius:3px; background:#ff2d4d; box-shadow:0 0 11px rgba(255,45,77,.95); }
+  #boost { position:absolute; bottom:130px; left:39px; transform:none; pointer-events:auto;
+           width:54px; height:54px; border-radius:50%; border:3px solid #9dff3a;
+           background:rgba(40,80,0,.4); color:#9dff3a; font-size:26px; line-height:1;
+           display:flex; align-items:center; justify-content:center;
+           box-shadow:0 0 18px rgba(157,255,58,.5); }
+  #boost:active { background:rgba(157,255,58,.35); transform:scale(.92); }
+  #jump { position:absolute; bottom:130px; left:105px; transform:none; pointer-events:auto;
+          width:54px; height:54px; border-radius:50%; border:3px solid #5ad0ff;
+          background:rgba(0,46,72,.45); color:#5ad0ff; font-size:26px; line-height:1;
+          display:flex; align-items:center; justify-content:center;
+          box-shadow:0 0 18px rgba(90,200,255,.5); }
+  #jump:active { background:rgba(90,200,255,.35); transform:scale(.92); }
+  #rocketWrap { position:absolute; bottom:60px; left:150px; width:54px; height:54px; pointer-events:none; }
+  #rktRing { position:absolute; left:50%; top:50%; width:66px; height:66px; transform:translate(-50%,-50%);
+             border-radius:50%; display:none; pointer-events:none;
+             background:conic-gradient(#ffae00 0deg, rgba(255,174,0,.12) 0deg);
+             -webkit-mask:radial-gradient(circle, transparent 24px, #000 25px);
+             mask:radial-gradient(circle, transparent 24px, #000 25px); filter:drop-shadow(0 0 6px rgba(255,174,0,.6)); }
+  #rocketBtn { position:absolute; left:0; top:0; pointer-events:auto;
+               width:54px; height:54px; border-radius:50%; border:3px solid #ff9a3a;
+               background:rgba(80,40,0,.55); color:#ffb46a; font-size:22px; line-height:1;
+               display:flex; flex-direction:column; align-items:center; justify-content:center;
+               box-shadow:0 0 18px rgba(255,150,60,.5); }
+  #rocketBtn:active { background:rgba(255,150,60,.35); transform:scale(.92); }
+  #rocketBtn.empty { border-color:#666; color:#ffd23a; background:rgba(30,25,10,.7); box-shadow:none; }
+  #rktAmmo { font-size:11px; font-weight:900; margin-top:1px; }
+
+  /* force landscape: cover the screen with a prompt while in portrait */
+  #rotate { position:fixed; inset:0; z-index:200; background:#06030f; color:#0ff;
+            display:none; align-items:center; justify-content:center; text-align:center;
+            font-family:'Orbitron',sans-serif; font-weight:900; font-size:20px;
+            letter-spacing:2px; text-shadow:0 0 14px #0ff; padding:24px; }
+  #rotate .ic { font-size:64px; display:block; margin-bottom:16px; animation:spin 2s ease-in-out infinite; }
+  @keyframes spin { 0%,100%{transform:rotate(0)} 50%{transform:rotate(90deg)} }
+  @media (orientation:portrait){ #rotate{ display:flex; } }
+  #posBlock,#center { display:none; }   /* hidden during testing */
+  #obsToggle { pointer-events:auto; font-family:'Orbitron',sans-serif; font-weight:900; font-size:11px;
+               color:#9dff3a; background:rgba(40,80,0,.4); border:2px solid #9dff3a; border-radius:8px;
+               padding:6px 9px; letter-spacing:1px; white-space:nowrap; box-shadow:0 0 10px rgba(157,255,58,.4); }
+  #obsToggle.off { color:#888; border-color:#555; background:rgba(30,30,30,.5); box-shadow:none; }
+  #menuBtn { pointer-events:auto; font-family:'Orbitron',sans-serif; font-weight:900; font-size:11px;
+             color:#9cf; background:rgba(20,40,80,.5); border:2px solid #5cf; border-radius:8px;
+             padding:6px 12px; letter-spacing:1px; white-space:nowrap; box-shadow:0 0 10px rgba(90,200,255,.4); }
+
+  .ryread { position:absolute; bottom:120px; width:130px; text-align:center; pointer-events:none;
+            font-family:'Orbitron'; font-weight:900; font-size:20px; color:#0ff;
+            text-shadow:0 0 8px #0ff; }
+  #ryL { left:17%; transform:translateX(-50%); }
+  #ryR { left:83%; transform:translateX(-50%); }
+
+  #tuner { position:absolute; top:0; left:0; right:0; z-index:15; box-sizing:border-box;
+           pointer-events:auto; display:flex; justify-content:center; align-items:center;
+           gap:8px; background:rgba(0,0,0,.6); padding:5px 8px;
+           border-bottom:1px solid rgba(157,255,58,.4); }
+  .nslider { flex:1 1 0; min-width:0; height:24px; position:relative;
+             touch-action:none; cursor:ew-resize; }
+
+  #start { position:absolute; inset:0; background:radial-gradient(circle at 50% 40%, #1a0b33, #000);
+           display:flex; flex-direction:column; align-items:center; justify-content:flex-start;
+           overflow-y:auto; padding:16px 10px; box-sizing:border-box;
+           pointer-events:auto; z-index:20; text-align:center; }
+  #start > h1 { margin-top:auto; }
+  #start > #ver { margin-bottom:auto; }
+  #start h1 { font-family:'Orbitron'; font-weight:900; font-size:46px;
+              background:linear-gradient(90deg,#0ff,#ff48c4,#9dff3a); -webkit-background-clip:text;
+              -webkit-text-fill-color:transparent; letter-spacing:4px; filter:drop-shadow(0 0 20px rgba(0,255,255,.4)); }
+  #start p { color:#7fd; margin-top:8px; letter-spacing:1px; font-size:15px; }
+  #start .keys { color:#888; margin-top:18px; font-size:13px; line-height:1.6; }
+  #playBtn { margin-top:26px; padding:14px 44px; font-family:'Orbitron'; font-weight:900; font-size:20px;
+             color:#000; background:linear-gradient(90deg,#0ff,#9dff3a); border:none; border-radius:8px;
+             letter-spacing:2px; box-shadow:0 0 24px rgba(0,255,255,.5); cursor:pointer; }
+  #ver { margin-top:22px; color:#666; font-family:'Orbitron'; font-size:12px; letter-spacing:3px; }
+  #testBtn { margin-top:14px; padding:10px 30px; font-family:'Orbitron'; font-weight:700; font-size:14px;
+             color:#bcdcff; background:rgba(30,50,90,.5); border:1px solid rgba(120,180,255,.4); border-radius:8px;
+             letter-spacing:2px; cursor:pointer; }
+  #upgBtn { margin-top:14px; padding:11px 34px; font-family:'Orbitron'; font-weight:800; font-size:15px;
+            color:#ffd23a; background:rgba(70,55,0,.5); border:2px solid #ffae00; border-radius:8px;
+            letter-spacing:2px; cursor:pointer; box-shadow:0 0 16px rgba(255,174,0,.4); }
+  #editBtn { margin-top:14px; padding:10px 30px; font-family:'Orbitron'; font-weight:700; font-size:14px;
+             color:#9dff3a; background:rgba(25,55,30,.5); border:1px solid #6fdf6a; border-radius:8px;
+             letter-spacing:2px; cursor:pointer; }
+  #editUI { position:absolute; inset:0; display:none; flex-direction:column; z-index:24; pointer-events:auto;
+            padding:10px 12px; box-sizing:border-box; color:#cfe; font-family:system-ui;
+            background:radial-gradient(circle at 50% 25%,#10182e,#05070f); overflow:hidden; }
+  #editUI.on { display:flex; }
+  #edTop { font-family:'Orbitron'; font-weight:800; font-size:16px; color:#9dff3a; margin-bottom:8px; flex:0 0 auto; }
+  #trkInfo { font-family:system-ui; font-weight:400; font-size:12px; color:#9ab; }
+  #edBody { flex:1 1 auto; overflow-y:auto; min-height:0; }
+  #edPalette { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px; }
+  .pbtn { padding:8px 9px; border-radius:8px; border:1px solid rgba(120,180,255,.3); background:rgba(30,50,90,.45);
+          color:#dfe; font-size:12px; font-weight:700; cursor:pointer; }
+  .pbtn:active { background:rgba(157,255,58,.35); transform:scale(.95); }
+  #trkProfile { width:100%; height:84px; display:block; border-radius:8px; border:1px solid rgba(120,180,255,.25);
+                background:rgba(8,12,22,.9); margin-bottom:8px; }
+  #seqLabel { font-size:12px; color:#9ab; margin-bottom:5px; }
+  #seqList { display:flex; flex-wrap:wrap; gap:4px; align-content:flex-start; }
+  .chip { padding:5px 8px; border-radius:6px; font-size:11px; font-weight:800; color:#04121f;
+          border:1px solid rgba(0,0,0,.35); cursor:pointer; }
+  .chip.sel { outline:2px solid #fff; outline-offset:1px; transform:scale(1.08); box-shadow:0 0 10px rgba(255,255,255,.6); }
+  #edBtns { display:flex; gap:8px; margin-top:8px; flex:0 0 auto; }
+  .ebtn { flex:1 1 0; height:44px; border-radius:8px; border:1px solid rgba(120,180,255,.35); background:rgba(30,50,90,.5);
+          color:#cfe; font-family:'Orbitron'; font-weight:700; font-size:13px; cursor:pointer; }
+  .ebtn.sm { height:36px; font-size:11px; }
+  .ebtn.on { background:rgba(157,255,58,.4); border-color:#9dff3a; color:#eaffd6; }
+  .ebtn.play { background:rgba(157,255,58,.35); border-color:#9dff3a; color:#eaffd6; }
+  .ebtn:active { transform:scale(.96); }
+  #shopUI { position:absolute; inset:0; display:none; flex-direction:column; align-items:center; gap:10px;
+            padding:18px; z-index:22; background:radial-gradient(circle at 50% 30%,#181020,#05060d);
+            font-family:'Segoe UI',system-ui,sans-serif; pointer-events:auto; }
+  #shopHead { font-family:'Orbitron'; font-weight:900; font-size:20px; color:#ffd23a; letter-spacing:2px; margin-top:6px; }
+  #shopList { width:100%; max-width:520px; flex:1 1 auto; overflow-y:auto; display:flex; flex-direction:column; gap:7px; }
+  .shopRow { display:flex; align-items:center; gap:10px; padding:11px 14px; border-radius:10px;
+             border:1px solid rgba(255,174,0,.35); background:rgba(40,32,10,.5); cursor:pointer; }
+  .shopRow .srName { flex:1 1 auto; color:#fff; font-weight:700; font-size:15px; }
+  .shopRow .srLv { flex:0 0 auto; color:#9cf; font-size:12px; font-weight:700; }
+  .shopRow .srCost { flex:0 0 auto; color:#ffd23a; font-weight:900; font-size:15px; min-width:64px; text-align:right; }
+  .shopRow.poor { opacity:.5; cursor:default; }
+  .shopRow.maxed { opacity:.6; cursor:default; border-color:#5c7; }
+  .shopRow.maxed .srCost { color:#5dff9d; }
+  #shopClose { flex:0 0 auto; width:100%; max-width:520px; height:48px; border-radius:10px; border:1px solid rgba(120,180,255,.4);
+               background:rgba(20,30,55,.6); color:#bcdcff; font-weight:700; font-size:15px; cursor:pointer; }
+  #shopReset { flex:0 0 auto; width:100%; max-width:520px; height:40px; border-radius:10px; border:1px solid rgba(255,90,120,.5);
+               background:rgba(60,20,30,.5); color:#ff9eb4; font-weight:700; font-size:13px; letter-spacing:1px; cursor:pointer; }
+  #shopReset:active { background:rgba(255,90,120,.3); }
+  #testUI { position:absolute; inset:0; display:none; flex-direction:row; justify-content:space-between;
+            z-index:25; pointer-events:none; font-family:'Segoe UI',system-ui,sans-serif; }
+  .trail { pointer-events:auto; width:28%; max-width:240px; height:100%; overflow-y:auto;
+           background:rgba(8,10,22,.84); padding:8px; box-sizing:border-box; }
+  #tcenter { flex:1 1 auto; pointer-events:none; display:flex; align-items:flex-end; justify-content:center; padding-bottom:12px; }
+  .tsec { font-family:'Orbitron'; font-size:10px; letter-spacing:1.5px; color:#7898c0; margin:9px 2px 4px; }
+  .trow { display:flex; gap:5px; margin-bottom:3px; }
+  .trow.tcol { flex-direction:column; }
+  .tab { display:flex; flex-direction:column; }
+  .tbtn { flex:1 1 0; min-width:0; height:34px; border-radius:7px; border:1px solid rgba(120,180,255,.3);
+          background:rgba(30,50,90,.4); color:#bcdcff; font-size:13px; font-weight:700; cursor:pointer; }
+  .tbtn.dim { opacity:.3; }
+  .tbtn.sel { background:rgba(80,160,255,.55); color:#fff; border-color:#9cf; box-shadow:0 0 10px rgba(120,180,255,.5); }
+  .tbtn.lm.sel { background:rgba(130,130,255,.6); border-color:#bbf; }
+  .tbtn.sm.sel { background:rgba(255,120,60,.55); border-color:#ffb38a; }
+  .tbtn.hm.sel { background:rgba(255,190,80,.5); border-color:#fe9; color:#fff; }
+  .tbtn.jm.sel { background:rgba(90,230,210,.5); border-color:#8ff; color:#fff; }
+  .tbtn.tg.sel { background:rgba(60,220,120,.55); border-color:#9f9; }
+  .tbtn.tb.sel { background:rgba(80,160,255,.55); border-color:#9cf; }
+  .tbtn.tr.sel { background:rgba(255,80,90,.55); border-color:#f99; }
+  .ttab { height:30px; margin-bottom:4px; border-radius:6px; border:1px solid rgba(120,180,255,.3);
+          background:rgba(30,50,90,.4); color:#bcdcff; font-size:12px; font-weight:700; letter-spacing:1px; cursor:pointer; }
+  .ttab.sel { background:rgba(157,255,58,.4); color:#fff; border-color:#9dff3a; }
+  .srow { display:flex; align-items:center; gap:6px; margin:2px 0 7px; }
+  .srow label { width:52px; flex:0 0 auto; font-size:11px; color:#9ab; }
+  .srow input[type=range] { flex:1 1 auto; min-width:0; accent-color:#5cf; }
+  .srow .sv { width:44px; flex:0 0 auto; text-align:right; font-size:12px; color:#cfe; font-variant-numeric:tabular-nums; }
+  #velCurve { width:100%; height:120px; display:block; margin:2px 0 6px; border-radius:8px;
+              border:1px solid rgba(120,180,255,.3); background:rgba(12,18,32,.9); touch-action:none; cursor:pointer; }
+  .hpnum { flex:1 1 auto; min-width:0; height:30px; border-radius:6px; border:1px solid rgba(120,180,255,.4);
+           background:rgba(20,30,55,.6); color:#fff; font-size:15px; font-weight:700; text-align:center; }
+  #testBack { width:100%; margin-top:12px; height:40px; border-radius:8px; border:1px solid rgba(120,180,255,.4);
+              background:rgba(20,30,55,.6); color:#bcdcff; font-weight:700; font-size:14px; cursor:pointer; }
+  #testFire { pointer-events:auto; width:200px; max-width:46vw; height:56px; border-radius:12px; border:2px solid #ff5b7b;
+              background:rgba(120,0,30,.5); color:#ff8aa0; font-size:18px; font-weight:900; letter-spacing:2px; cursor:pointer; }
+  #testFire:active { background:rgba(255,80,110,.5); color:#fff; }
+  #viewBtn { position:absolute; bottom:210px; right:28px; pointer-events:auto; z-index:6;
+             padding:8px 12px; border-radius:18px; border:1px solid rgba(0,255,255,.5);
+             background:rgba(0,40,60,.5); color:#9eefff; font-family:'Orbitron',system-ui; font-weight:700;
+             font-size:12px; letter-spacing:1px; box-shadow:0 0 12px rgba(0,255,255,.3); }
+  #viewBtn:active { background:rgba(157,255,58,.3); transform:scale(.94); }
+  body.testing #hud, body.testing #tuner, body.testing .ctrl, body.testing #boost, body.testing #jump, body.testing #rocketWrap { display:none !important; }
+  .iobtn { flex:1 1 0; height:30px; border-radius:6px; border:1px solid rgba(120,180,255,.3); background:rgba(30,50,90,.4);
+           color:#bcdcff; font-size:12px; font-weight:700; letter-spacing:1px; cursor:pointer; }
+  #ioBox { position:absolute; inset:0; display:none; flex-direction:column; gap:8px; padding:18px; z-index:40;
+           background:rgba(5,7,16,.96); font-family:'Segoe UI',system-ui,sans-serif; }
+  #ioTitle { font-family:'Orbitron'; font-size:13px; letter-spacing:1.5px; color:#9cf; }
+  #ioText { flex:1 1 auto; width:100%; resize:none; background:#0b1020; color:#cfe; border:1px solid rgba(120,180,255,.3);
+            border-radius:8px; padding:10px; font-family:monospace; font-size:12px; }
+  #ioMsg { font-size:12px; color:#9dff3a; min-height:14px; }
+  .iorow { display:flex; gap:10px; }
+  #ioAction { flex:1 1 auto; height:46px; border-radius:10px; border:2px solid #5cf; background:rgba(20,40,80,.6);
+              color:#9cf; font-weight:800; font-size:15px; letter-spacing:1px; cursor:pointer; }
+  #ioClose { flex:0 0 auto; padding:0 22px; height:46px; border-radius:10px; border:1px solid rgba(120,180,255,.4);
+             background:rgba(20,30,55,.6); color:#bcdcff; font-weight:700; cursor:pointer; }
+  #finish { position:absolute; inset:0; background:rgba(10,4,20,.92); display:none;
+            flex-direction:column; align-items:center; justify-content:center; z-index:20; pointer-events:auto; }
+  #finish h2 { font-family:'Orbitron'; font-weight:900; font-size:38px; color:#9dff3a;
+               text-shadow:0 0 18px #9dff3a; letter-spacing:3px; }
+  #finish p { color:#0ff; font-size:20px; margin-top:14px; font-family:'Orbitron'; }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="cv"></canvas>
+
+  <div id="hud">
+    <div id="topL">
+      <div id="coinBox"><span id="coinIcon">●</span><span id="coinVal">0</span></div>
+      <div id="energyLbl" class="hudtxt">BOOST</div>
+      <div id="energyBar"><div id="energyFill"></div></div>
+      <div id="posBlock">
+        <span id="posLbl" class="hudtxt">POSITION</span>
+        <span id="lapLbl" class="hudtxt">LAP <span id="lapVal">1/3</span></span>
+        <div id="posVal" class="hudtxt">6</div>
+      </div>
+    </div>
+    <div id="topC">
+      <div class="cgrp">
+        <div id="timeLbl" class="hudtxt">LAP TIME</div>
+        <div id="timeVal" class="hudtxt">0'00"0</div>
+      </div>
+      <div class="cgrp">
+        <div id="kphVal" class="hudtxt">0</div>
+        <div id="kphLbl" class="hudtxt">MPH</div>
+      </div>
+    </div>
+    <div id="center">
+      <div class="ranklbl">2ND</div>
+      <div class="ranklbl">3RD</div>
+      <div class="ranklbl">4TH</div>
+      <div class="ranklbl">5TH</div>
+    </div>
+    <div id="moveTxt"></div>
+  </div>
+
+  <div id="rotate"><div><span class="ic">⟳</span>ROTATE TO LANDSCAPE<br><span style="font-size:12px;color:#9dff3a;letter-spacing:1px;font-weight:400">NERVE plays sideways</span></div></div>
+  <div id="tuner">
+    <button id="menuBtn">‹ MENU</button>
+    <button id="obsToggle">OBST ON</button>
+  </div>
+
+  <div id="ioBox">
+    <div id="ioTitle">EXPORT</div>
+    <textarea id="ioText" spellcheck="false" autocomplete="off"></textarea>
+    <div id="ioMsg"></div>
+    <div class="iorow"><button id="ioAction">Copy</button><button id="ioClose">Close</button></div>
+  </div>
+
+  <div class="ctrl" id="left"><div class="arrow fire" id="fireGlyph"></div></div>
+  <div class="ctrl" id="right"><div class="arrow">✛</div></div>
+  <button id="boost">🔥</button>
+  <button id="jump">⬆</button>
+  <div id="padDbg" style="position:absolute;top:6px;left:50%;transform:translateX(-50%);color:#5ad0ff;font:bold 16px monospace;z-index:9999;pointer-events:none;background:rgba(0,0,0,.72);padding:4px 12px;border-radius:8px;white-space:nowrap">pad: —</div>
+  <button id="viewBtn">👁 CHASE</button>
+  <div id="rocketWrap"><div id="rktRing"></div><button id="rocketBtn">🚀<span id="rktAmmo">6</span></button></div>
+
+  <div id="start">
+    <h1>NERVE</h1>
+    <p>HOW HARD DO YOU DARE PRESS?</p>
+    <button id="playBtn">START RACE</button>
+    <button id="upgBtn">⚙ UPGRADES</button>
+    <button id="editBtn">🛠 TRACK EDITOR</button>
+    <button id="testBtn">🔧 TEST BENCH</button>
+    <div id="ver"></div>
+  </div>
+
+  <div id="shopUI">
+    <div id="shopHead">UPGRADES&nbsp;&nbsp;<span id="shopGold">0</span> ◉</div>
+    <div id="shopList"></div>
+    <button id="shopReset">↺ RESET UPGRADES</button>
+    <button id="shopClose">‹ BACK</button>
+  </div>
+
+  <div id="editUI">
+    <div id="edTop">TRACK EDITOR&nbsp;&nbsp;<span id="trkInfo"></span></div>
+    <div id="edBody">
+      <div id="edPalette"></div>
+      <canvas id="trkProfile" width="640" height="84"></canvas>
+      <div id="seqLabel">TRACK&nbsp;<span id="edHint" style="color:#789">tap a tile to select it</span></div>
+      <div id="seqList"></div>
+    </div>
+    <div id="edBtns">
+      <button id="edIns" class="ebtn sm">INSERT: OFF</button>
+      <button id="edDel" class="ebtn sm">DELETE</button>
+      <button id="edUndo" class="ebtn sm">UNDO</button>
+      <button id="edClear" class="ebtn sm">CLEAR</button>
+    </div>
+    <div id="edBtns">
+      <button id="edPlay" class="ebtn play">▶ PLAY</button>
+      <button id="edBack" class="ebtn">‹ BACK</button>
+    </div>
+  </div>
+
+  <div id="testUI">
+    <div id="tleft" class="trail">
+      <div class="tsec">WEAPON</div>
+      <div class="trow"><button class="tbtn sel" data-tk="w" data-ti="0">LASER</button></div>
+      <div class="trow"><button class="tbtn" data-tk="w" data-ti="1">ROCKET</button><button class="tbtn dim" disabled>WPN 3</button></div>
+      <div class="tsec">TARGET</div>
+      <div class="trow">
+        <button class="tbtn tg sel" data-tk="t" data-ti="0">GRN</button>
+        <button class="tbtn tb" data-tk="t" data-ti="1">BLU</button>
+        <button class="tbtn tr" data-tk="t" data-ti="2">RED</button>
+      </div>
+      <div class="tsec">TUNE&nbsp;&rarr;</div>
+      <div class="trow tcol">
+        <button class="ttab sel" data-tab="sounds">SOUNDS</button>
+        <button class="ttab" data-tab="weapon">WEAPON</button>
+        <button class="ttab" data-tab="boost">BOOST</button>
+        <button class="ttab" data-tab="target">TARGET</button>
+      </div>
+      <div class="tsec">PRESET</div>
+      <div class="trow"><button id="ioExport" class="iobtn">EXPORT</button><button id="ioImport" class="iobtn">IMPORT</button></div>
+      <button id="testBack">‹ BACK</button>
+    </div>
+
+    <div id="tcenter"><button id="testFire">HOLD&nbsp;TO&nbsp;FIRE</button></div>
+
+    <div id="tright" class="trail">
+      <div id="tab_sounds" class="tab">
+        <div class="tsec">LASER FIRE</div>
+        <div class="trow">
+          <button class="tbtn lm sel" data-tk="l" data-ti="0">1</button>
+          <button class="tbtn lm" data-tk="l" data-ti="1">2</button>
+          <button class="tbtn lm" data-tk="l" data-ti="2">3</button>
+          <button class="tbtn lm" data-tk="l" data-ti="3">4</button>
+          <button class="tbtn lm" data-tk="l" data-ti="4">5</button>
+        </div>
+        <div class="srow"><label>Laser vol</label><input type="range" data-pk="laserVol" min="0" max="1.5" step="0.05"><span class="sv"></span></div>
+        <div class="srow"><label>Laser pitch</label><input type="range" data-pk="laserPitch" min="0.4" max="2.2" step="0.05"><span class="sv"></span></div>
+        <div class="tsec">TARGET HIT (survives)</div>
+        <div class="trow">
+          <button class="tbtn hm sel" data-tk="h" data-ti="0">1</button>
+          <button class="tbtn hm" data-tk="h" data-ti="1">2</button>
+          <button class="tbtn hm" data-tk="h" data-ti="2">3</button>
+          <button class="tbtn hm" data-tk="h" data-ti="3">4</button>
+          <button class="tbtn hm" data-tk="h" data-ti="4">5</button>
+        </div>
+        <div class="srow"><label>Hit vol</label><input type="range" data-pk="hitVol" min="0" max="1.5" step="0.05"><span class="sv"></span></div>
+        <div class="tsec">TARGET DESTROY</div>
+        <div class="trow">
+          <button class="tbtn sm sel" data-tk="s" data-ti="0">1</button>
+          <button class="tbtn sm" data-tk="s" data-ti="1">2</button>
+          <button class="tbtn sm" data-tk="s" data-ti="2">3</button>
+          <button class="tbtn sm" data-tk="s" data-ti="3">4</button>
+          <button class="tbtn sm" data-tk="s" data-ti="4">5</button>
+        </div>
+        <div class="srow"><label>Destroy vol</label><input type="range" data-pk="shatterVol" min="0" max="1.5" step="0.05"><span class="sv"></span></div>
+        <div class="tsec">JET WHINE</div>
+        <div class="trow">
+          <button class="tbtn jm sel" data-tk="j" data-ti="0">1</button>
+          <button class="tbtn jm" data-tk="j" data-ti="1">2</button>
+          <button class="tbtn jm" data-tk="j" data-ti="2">3</button>
+          <button class="tbtn jm" data-tk="j" data-ti="3">4</button>
+          <button class="tbtn jm" data-tk="j" data-ti="4">5</button>
+        </div>
+        <div class="srow"><label>Pitch</label><input type="range" data-pk="jetPitch" min="0.4" max="2.2" step="0.05"><span class="sv"></span></div>
+        <div class="srow"><label>Volume</label><input type="range" data-pk="jetVol" min="0" max="1.5" step="0.05"><span class="sv"></span></div>
+        <div class="srow"><label>Variance</label><input type="range" data-pk="jetVar" min="0" max="1" step="0.05"><span class="sv"></span></div>
+      </div>
+
+      <div id="tab_laser" class="tab" style="display:none">
+        <div class="tsec">BEAMS</div>
+        <div class="trow"><button class="tbtn" data-tk="b" data-ti="1">1</button><button class="tbtn sel" data-tk="b" data-ti="2">2</button><button class="tbtn" data-tk="b" data-ti="3">3</button></div>
+        <div class="tsec">BEAM</div>
+        <div class="srow"><label>Damage</label><input type="range" data-pk="laserDmg" min="1" max="40" step="1"><span class="sv"></span></div>
+        <div class="srow"><label>Width</label><input type="range" data-pk="boltWidthMul" min="0.3" max="3" step="0.05"><span class="sv"></span></div>
+        <div class="srow"><label>Length</label><input type="range" data-pk="boltLenMul" min="0.3" max="3" step="0.05"><span class="sv"></span></div>
+        <div class="srow"><label>Range</label><input type="range" data-pk="laserRange" min="20" max="200" step="5"><span class="sv"></span></div>
+        <div class="srow"><label>Aim mode</label><button id="aimToggle" class="tbtn" style="height:30px;flex:1">HOMING</button></div>
+        <div class="srow"><label>Craft lane</label><input type="range" data-pk="craftLane" min="-1.77" max="1.77" step="0.01"><span class="sv"></span></div>
+        <div class="srow"><label>Aim point</label><input type="range" data-pk="aimSeg" min="5" max="60" step="1"><span class="sv"></span></div>
+        <div class="srow"><label>Craft height</label><input type="range" data-pk="craftLift" min="0" max="600" step="10"><span class="sv"></span></div>
+        <div class="srow"><label>Fade</label><input type="range" data-pk="fadeFrac" min="0.02" max="0.9" step="0.02"><span class="sv"></span></div>
+        <div class="srow"><label>Auto-aim</label><input type="range" data-pk="autoAim" min="0" max="1.5" step="0.05"><span class="sv"></span></div>
+        <div class="srow"><label>Fire gap</label><input type="range" data-pk="fireGap" min="0.04" max="0.4" step="0.005"><span class="sv"></span></div>
+      </div>
+
+      <div id="tab_rocket" class="tab" style="display:none">
+        <div class="tsec">ROCKET (full-auto in race)</div>
+        <div class="srow"><label>Rockets/shot</label><input type="range" data-pk="rocketCount" min="1" max="3" step="1"><span class="sv"></span></div>
+        <div class="srow"><label>Time between</label><input type="range" data-pk="rocketGap" min="0.05" max="1" step="0.01"><span class="sv"></span></div>
+        <div class="srow"><label>Damage</label><input type="range" data-pk="rocketDmgBase" min="5" max="150" step="5"><span class="sv"></span></div>
+        <div class="srow"><label>Max velocity</label><input type="range" data-pk="rocketVel" min="80" max="1200" step="10"><span class="sv"></span></div>
+        <div class="srow"><label>Distance</label><input type="range" data-pk="rocketRange" min="20" max="200" step="5"><span class="sv"></span></div>
+        <div class="srow"><label>Blast radius</label><input type="range" data-pk="rocketBlastR" min="0.1" max="1.5" step="0.02"><span class="sv"></span></div>
+        <div class="tsec">VELOCITY RAMP&nbsp;<span style="color:#789">launch→impact</span></div>
+        <canvas id="velCurve" width="240" height="120"></canvas>
+        <div class="trow"><button id="velAdd" class="iobtn">+ POINT</button><button id="velDel" class="iobtn">– POINT</button></div>
+      </div>
+
+      <div id="tab_boost" class="tab" style="display:none">
+        <div class="tsec">BOOST (hold-to-boost meter)</div>
+        <div class="srow"><label>Power</label><input type="range" data-pk="boostPower" min="0.2" max="2" step="0.05"><span class="sv"></span></div>
+        <div class="srow"><label>Drain</label><input type="range" data-pk="boostDrain" min="0.1" max="1.2" step="0.02"><span class="sv"></span></div>
+        <div class="srow"><label>Regen</label><input type="range" data-pk="boostRegen" min="0.02" max="0.8" step="0.02"><span class="sv"></span></div>
+        <div class="srow"><label>Regen delay</label><input type="range" data-pk="boostDelay" min="0" max="3" step="0.1"><span class="sv"></span></div>
+        <div class="srow"><label>Jump height</label><input type="range" data-pk="jumpHeight" min="1100" max="8900" step="100"><span class="sv"></span></div>
+        <div class="srow"><label>Jump touch</label><input type="range" data-pk="fireJumpR" min="0.4" max="2" step="0.05"><span class="sv"></span></div>
+        <div class="srow"><label>Boost touch</label><input type="range" data-pk="fireBoostR" min="0.4" max="2" step="0.05"><span class="sv"></span></div>
+        <div class="tsec">BOOST RAMP&nbsp;<span style="color:#789">hold → full</span></div>
+        <canvas id="boostCurve" width="240" height="120"></canvas>
+        <div class="trow"><button id="bcAdd" class="iobtn">+ POINT</button><button id="bcDel" class="iobtn">– POINT</button></div>
+      </div>
+
+      <div id="tab_target" class="tab" style="display:none">
+        <div class="tsec">CRYSTAL (selected target)</div>
+        <div class="srow"><label>HP</label><input type="number" id="hpInput" min="1" max="999" step="1" class="hpnum"><span class="sv"></span></div>
+        <div class="srow"><label>Shards</label><input type="range" data-pk="shardCount" min="3" max="24" step="1"><span class="sv"></span></div>
+        <div class="srow"><label>Size</label><input type="range" data-pk="targetSizeMul" min="0.4" max="2.5" step="0.05"><span class="sv"></span></div>
+        <div class="srow"><label>Opacity</label><input type="range" data-pk="targetAlpha" min="0.2" max="1" step="0.05"><span class="sv"></span></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="finish">
+    <h2 id="finishTitle">RACE COMPLETE</h2>
+    <p id="finishPos"></p>
+    <p id="finishTime"></p>
+    <button id="playBtn2" style="margin-top:26px;padding:12px 36px;font-family:'Orbitron';font-weight:900;font-size:18px;color:#000;background:linear-gradient(90deg,#0ff,#9dff3a);border:none;border-radius:8px;letter-spacing:2px;cursor:pointer;">RACE AGAIN</button>
+  </div>
+</div>
+
+<script>
+// ============================================================
+//  NERVE — pressure-steer arcade racer
+//  VERSION 2.78   (bump by 0.01 each new version)
+// ============================================================
+const VERSION = '2.78';
+document.title = 'NERVE — v' + VERSION;
+const _ver = document.getElementById('ver'); if(_ver) _ver.textContent = 'v' + VERSION;
+
+// ---- kill the mobile URL bar: real fullscreen on first touch ----
+// Chrome only hides browser chrome via the Fullscreen API, and that API can
+// only fire inside a user gesture. So we attach it to the first pointerdown
+// anywhere (capture phase so control handlers can't swallow it first), then
+// no-op once we're already fullscreen. Orientation lock only works while
+// fullscreen, so we chain it after the request resolves.
+function goFullscreen(){
+  const el = document.documentElement;
+  const req = el.requestFullscreen || el.webkitRequestFullscreen;
+  if(req && !(document.fullscreenElement || document.webkitFullscreenElement)){
+    try{
+      const p = req.call(el);
+      if(p && p.then) p.then(lockLandscape).catch(()=>{}); else lockLandscape();
+    }catch(e){}
+  } else { lockLandscape(); }
+}
+function lockLandscape(){ try{ screen.orientation.lock('landscape'); }catch(e){} }
+window.addEventListener('pointerdown', goFullscreen, true);
+
+const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
+
+// ---- render sizing (internal low-res for that retro look) ----
+let W=360, H=720;
+function fit(){
+  const aw=window.innerWidth, ah=window.innerHeight;
+  H = 700;                                   // internal vertical resolution
+  W = Math.max(240, Math.round(H*aw/ah));    // match screen aspect (portrait)
+  cv.width=W; cv.height=H;
+  cv.style.width=aw+'px'; cv.style.height=ah+'px';   // fill the whole screen
+}
+fit(); window.addEventListener('resize',fit);
+
+// ---- track / pseudo-3D constants ----
+const segLen=200, roadW=2800, rumbleLen=3, lanes=3;
+let camHeight=1500; const camDepth=1/Math.tan((100/2)*Math.PI/180);
+// camera views (toggle button): height sets how far back/high; craft size sells the distance
+const VIEWS=[
+  {name:'FAR',     h:2900, craft:26},                 // way back, lots of track
+  {name:'CHASE',   h:1500, craft:42},                 // default
+  {name:'CLOSE',   h:620,  craft:96},                 // right on its tail
+  {name:'COCKPIT', h:70,   craft:0, cockpit:true},    // first-person; eye sits BELOW the roof cannon (axis 110) so bolts come from above
+];
+let viewIdx=0, craftSize=42, cockpit=false;
+function setView(i){ viewIdx=((i%VIEWS.length)+VIEWS.length)%VIEWS.length; const v=VIEWS[viewIdx];
+  camHeight=v.h; craftSize=v.craft; cockpit=!!v.cockpit;
+  try{ localStorage.setItem('nerve_view', String(viewIdx)); }catch(e){}
+  const b=document.getElementById('viewBtn'); if(b) b.textContent='👁 '+v.name; }
+const CAM_FOLLOW=0.5;   // how much the camera chases the player sideways/up the bank; the craft visibly moves the remainder (0 = pure centreline cam)
+const drawDist=440, fogDensity=4;
+const maxSpeed=segLen*85, accel=maxSpeed/0.75, decel=-maxSpeed/2.4, offRoadDecel=-maxSpeed/2;
+const offRoadLimit=maxSpeed/4, centrifugal=0.28, maxBoost=maxSpeed*1.55;
+
+// ---- weapon/target tunables referenced during track+obstacle setup (declared early to avoid TDZ) ----
+let laserDmg=5;          // damage per bolt
+let targetHP=[10,20,40]; // HP for green / blue / red
+
+// ---- banked half-pipe cross-section ----
+// Road surface height as a function of lateral fraction u (-1=left lip, +1=right lip):
+// Cross-section H(u): a wide, gently-curved valley floor that rises into steep walls near
+// the edges. Power profile (|u|/uEdge)^P with P>2 keeps the centre flat for "normal" racing.
+let bankDeg = 70;
+const uEdge=1.8, bankP=2.4;
+let bankHedge = Math.tan(bankDeg*Math.PI/180)*uEdge*roadW/bankP;   // wall height at the edge
+function setBankDeg(d){ bankDeg=d; bankHedge=Math.tan(d*Math.PI/180)*uEdge*roadW/bankP; }
+function bankH(u){ return bankHedge*Math.pow(Math.abs(u)/uEdge, bankP); }
+function bankAngleAt(u){    // signed surface tilt at fraction u
+  const a=Math.abs(u); if(a<1e-4) return 0;
+  const dHdu = bankHedge*bankP*Math.pow(a/uEdge, bankP-1)/uEdge;
+  return Math.atan(dHdu/roadW)*Math.sign(u);
+}
+// Bands span the half-pipe: road from the lip (±1) up the banked walls to ±1.8.
+const U_BANDS=[-1.8,-1.7,-1.58,-1.44,-1.28,-1.1,-0.9,-0.68,-0.45,-0.22,0,0.22,0.45,0.68,0.9,1.1,1.28,1.44,1.58,1.7,1.8];
+const U_CENTER=U_BANDS.indexOf(0), U_RAIL_L=U_BANDS.indexOf(-1.8), U_RAIL_R=U_BANDS.indexOf(1.8);
+
+// colour helpers for banked shading / fog
+function hexRGB(h){ return [parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)]; }
+function shadeHex(h,f){ const c=hexRGB(h); return 'rgb('+Math.min(255,c[0]*f|0)+','+Math.min(255,c[1]*f|0)+','+Math.min(255,c[2]*f|0)+')'; }
+function fogHex(h,t){ const a=hexRGB(h),b=[58,18,89]; return 'rgb('+(a[0]+(b[0]-a[0])*t|0)+','+(a[1]+(b[1]-a[1])*t|0)+','+(a[2]+(b[2]-a[2])*t|0)+')'; }
+
+let segs=[], trackLen=0;
+let obstacles=[];      // destructible neon "targets" on the track
+let coinCount=0, coinFx=[], coinPop=0;   // coin total, in-flight coin particles, counter pop animation
+const COIN_EX=64, COIN_EY=64;            // screen point the coins fly into (the upper-left counter)
+let obsBySeg={};       // segment index -> obstacles on it (for depth-correct drawing)
+let obstaclesOn=true;  // toggle for testing
+let benchMode=false;   // test bench is live: real track + frozen craft + auto-fire
+let hitFlashT=0;       // red flash timer when you smash one
+const COL={
+  lightRoad:'#4b4660', darkRoad:'#3a3550',
+  lightGrass:'#15102a', darkGrass:'#100c22',
+  lightRumble:'#ff2b8f', darkRumble:'#0ff', lane:'#bdb8d6'
+};
+
+const DEFAULT_SECTIONS=[
+    [60,0,0],      [45,2.0,600],   [50,-2.4,-300],  [40,0,900],
+    [55,3.2,-600], [40,-1.6,0],    [70,3.8,1400],   [50,0,-1400],
+    [60,-4.2,300], [45,1.4,-300],  [80,0,0],         [50,2.6,800],
+    [55,-3.0,-500],[40,0,500],     [60,-2.2,-900],   [50,1.8,400],
+    [70,4.0,1200], [45,0,-1200],   [55,-3.4,0],      [40,2.0,-200],
+    [90,0,0],      [50,-2.8,700],  [60,3.0,-400],    [45,0,0]
+];
+function buildTrack(customSections, smoothAmp){
+  segs=[];
+  function add(curve, y){
+    const n=segs.length;
+    segs.push({index:n, curve:curve,
+      p1:{world:{y:lastY(), z:n*segLen}}, p2:{world:{y:y, z:(n+1)*segLen}}});
+  }
+  function lastY(){ return segs.length? segs[segs.length-1].p2.world.y : 0; }
+  function road(num, curve, ydelta){
+    const startY=lastY();
+    for(let i=0;i<num;i++){
+      const y=startY+ydelta*((i+1)/num);          // LINEAR height ramp: stacked same pieces = one constant slope
+      add(curve*easeInOut(i/num), y);             // (curve still eases; elevation is smoothed globally below)
+    }
+  }
+  function easeInOut(p){ return p<.5? 2*p*p : -1+(4-2*p)*p; }
+
+  // Sections: [segments, curve, hillDelta]. Default circuit aims ~22-25s/lap.
+  const sections = (customSections && customSections.length) ? customSections : DEFAULT_SECTIONS;
+  for(const [num,curve,yd] of sections) road(num,curve,yd);
+
+  // Close the elevation loop: the section hills sum to a net height (~+1000) by the end, so the
+  // ground popped where the lap wraps back to the start. Subtract that drift as a gentle linear
+  // ramp so the last segment's height (and slope) meets segment 0 seamlessly.
+  (function closeElevation(){
+    const n=segs.length; if(!n) return;
+    const E=segs[n-1].p2.world.y;                 // accumulated height at the end (start is 0)
+    for(let i=0;i<n;i++){
+      segs[i].p1.world.y -= E*(i/n);
+      segs[i].p2.world.y -= E*((i+1)/n);
+    }
+  })();
+
+  // Round the joints between pieces so the climb/descent is continuous (no slope snap at each
+  // boundary that made the craft hitch). A short wrapping moving-average over the vertex heights.
+  (function smoothElevation(){
+    const n=segs.length; if(!n) return;
+    const v=new Array(n); for(let i=0;i<n;i++) v[i]=segs[i].p1.world.y;
+    const out=new Array(n), win=7;
+    for(let i=0;i<n;i++){ let s=0; for(let k=-win;k<=win;k++) s+=v[((i+k)%n+n)%n]; out[i]=s/(win*2+1); }
+    for(let i=0;i<n;i++){ segs[i].p1.world.y=out[i]; segs[i].p2.world.y=out[(i+1)%n]; }
+  })();
+
+  // A much heavier average of the elevation — the "straightened" baseline the bank edges trend toward,
+  // so the rails read as a near-level line instead of snaking up/down with every hill (edgeFlat() blends to it).
+  (function flattenBaseline(){
+    const n=segs.length; if(!n) return;
+    const v=new Array(n); for(let i=0;i<n;i++) v[i]=segs[i].p1.world.y;
+    const win=54;
+    for(let i=0;i<n;i++){ let s=0; for(let k=-win;k<=win;k++) s+=v[((i+k)%n+n)%n]; segs[i].yFlat=s/(win*2+1); }
+  })();
+
+  // Smooth the curve data (wrapping around the loop) so the road eases between bends instead
+  // of snapping at section boundaries — the camera flows through curves rather than jerking.
+  (function smoothCurves(){
+    const n=segs.length, raw=segs.map(s=>s.curve), win=14, amp=(smoothAmp!=null?smoothAmp:0.20);
+    for(let i=0;i<n;i++){
+      let sum=0;
+      for(let k=-win;k<=win;k++) sum+=raw[((i+k)%n+n)%n];
+      segs[i].curve=(sum/(win*2+1))*amp;   // averaged (eased transitions), scaled by amp
+    }
+  })();
+
+  // mark start/finish + rumble
+  trackLen=segs.length*segLen;
+
+  // destructible obstacles scattered down the track at varied lateral lanes:
+  // some dead-centre, some out toward / up the banks.
+  obstacles=[]; obsBySeg={};
+  const laneU=[0,0,0.4,-0.4,0.75,-0.75,1.05,-1.05,1.35,-1.35];
+  // target types: green common/soft, blue mid, red rare/tough. value = coins dropped when shot down.
+  function makeType(){
+    const r=Math.random();
+    if(r<0.55) return {hue:135,hp:targetHP[0],value:3, sz:0.9};
+    if(r<0.87) return {hue:210,hp:targetHP[1],value:5, sz:1.06};
+    return            {hue:0,  hp:targetHP[2],value:15,sz:1.32};
+  }
+  for(let s=18; s<segs.length-8; s+=22+Math.floor(Math.random()*28)){
+    const count=1+(Math.random()<0.30?1:0);
+    const picks=[];
+    for(let k=0;k<count;k++){
+      let u, tr=0; do{ u=laneU[Math.floor(Math.random()*laneU.length)]; tr++; }while(picks.includes(u)&&tr<6);
+      picks.push(u);
+      const ty=makeType();
+      const ob={seg:s, z:s*segLen+segLen*0.5, u, hue:ty.hue, hp:ty.hp, maxHp:ty.hp, value:ty.value, szMul:ty.sz, broken:false, breakT:0};
+      obstacles.push(ob);
+      (obsBySeg[s]=obsBySeg[s]||[]).push(ob);
+    }
+  }
+  // ---- gaps you must jump over: holes in the track. type 1=full, 2=left half hole, 3=right half hole ----
+  (function markGaps(){
+    const n=segs.length; for(let i=0;i<n;i++) segs[i].gap=0;
+    if(n<80) return;
+    const pat=[1,2,1,3,2,1,3,1];   // mix of full and one-sided gaps
+    let p=80, k=0;
+    while(p < n-24){
+      const type=pat[k%pat.length];
+      const wseg=10*rumbleLen;                   // 10 visible strips wide (one strip = one light/dark band = rumbleLen segs)
+      let clear=true; for(let j=-1;j<=wseg;j++){ if(obsBySeg[p+j]) clear=false; }   // don't drop a gap onto a target
+      if(clear) for(let j=0;j<wseg;j++){ if(p+j<n) segs[p+j].gap=type; }
+      p += 110 + (k%3)*34; k++;
+    }
+  })();
+  // make a copy loop friendly: keep linear, finish line near start
+}
+buildTrack();
+
+function findSeg(z){ return segs[Math.floor(z/segLen)%segs.length]; }
+function groundAt(z){ z=((z%trackLen)+trackLen)%trackLen; const s=findSeg(z); const f=(z%segLen)/segLen;
+  return s.p1.world.y + (s.p2.world.y - s.p1.world.y)*f; }   // interpolated track height
+const EDGE_FLATTEN=0.93;   // how strongly the bank edges straighten toward the flat baseline (0=off, 1=fully level rails)
+function edgeFlat(u){ return Math.min(1, Math.pow(Math.abs(u)/uEdge, 1.7)) * EDGE_FLATTEN; }   // 0 at centre → ~0.85 at the rail
+function yFlatAt(z){ z=((z%trackLen)+trackLen)%trackLen; const s=findSeg(z); const f=(z%segLen)/segLen;
+  const a=(s.yFlat!=null)?s.yFlat:s.p1.world.y, b=segs[(s.idx+1)%segs.length]; const bb=(b&&b.yFlat!=null)?b.yFlat:s.p2.world.y;
+  return a+(bb-a)*f; }
+// world-height of the road surface above the raw centreline at lane u: bank wall + edge-straightening toward the flat baseline
+function bankLift(seg,u){ const cy=seg?seg.p1.world.y:0, yf=(seg&&seg.yFlat!=null)?seg.yFlat:cy; return bankH(u) + (yf-cy)*edgeFlat(u); }
+
+// ---- game state ----
+let state='menu';
+let pos=0, playerX=0, speed=0, lap=1, totalLaps=3;
+// vertical / airtime: the craft has a real world-height with gravity, so cresting a hill into a drop launches it
+const GRAV=16000;                 // world-units/s^2 pulling the craft down when airborne
+const LAUNCH_CAP=2000;            // max upward speed off a ramp, so crests don't fling the craft straight up
+let jumpHeight=2700;             // jump apex in world units (tunable in bench: ~half to 4x of the old ~2200)
+const JUMP_GRAV=2.5;             // gravity multiplier during a button-jump — lower = more hang time + gentler descent (height unchanged, since launch speed is derived from it)
+const AIR_MIN=60;                 // must clear this gap to leave the ground — stops jitter/micro-hops on small bumps
+let BOLT_LIFT=110;               // (legacy; laser height is now derived — see laserLift)
+let CRAFT_LIFT=0;                // extra world-height the vehicle sits above the track (tunable in bench)
+const LASER_AXIS=210;            // world-height of the cannon's central axis above the craft's belly (roof mount; raised so cockpit bolts emit from above)
+// Lasers/rockets emit from the cannon, so their float height above the road = how high the craft sits
+// (CRAFT_LIFT) + how high the barrel axis sits on the craft (LASER_AXIS). No separate "laser height" knob.
+function laserLift(){ return CRAFT_LIFT + LASER_AXIS; }
+let laserStyle=0;               // 0 = HOMING (bolts curve onto targets), 1 = STRAIGHT (real beam aimed at a fixed point ahead)
+let aimSeg=20;                  // STRAIGHT mode: the beam always points at the centreline this many segments ahead
+let craftY=0, vy=0, airH=0, airborne=false, prevGroundY=null, landT=0;
+let camYsmooth=0;   // smoothed camera height — follows the ground the craft is on so climbs stay framed
+let unlimitedLaps=true;   // testing: never finish, just keep lapping
+let lapStart=0, now=0, bestLap=0, raceStart=0;
+let energy=1, boostT=0, boostEnv=0;   // boostEnv = smoothed envelope (drives flame/audio)
+// ---- hold-to-boost: drains a meter that regenerates after a delay; tunable in the bench ----
+let boostMeter=1, boostRamp=0, boostIdle=9, boosting=false, wasBoosting=false;
+let boostPower=1.0;    // extra top speed as a fraction of base (1.0 → ~1200mph ceiling)
+let boostDrain=0.4;    // meter drained per second while boosting (~2.5s of boost from full)
+let boostRegen=0.22;   // meter regained per second (~4.5s to refill)
+let boostDelay=0.6;    // seconds after releasing boost before regen starts
+let boostPts=[{x:0,y:0.3},{x:1,y:1}];   // boost ramp: x=hold progress, y=fraction of full boost applied
+let jetVis=0;                          // smoothed flame level (fast attack + release)
+let steerVisual=0;
+let steerSmooth=0;   // low-passed steering so input changes ease in instead of snapping
+let jetThrustL=0, jetThrustR=0;   // current thrust of left / right engines (0..1)
+let cars=[]; // rivals
+const totalCars=6;
+
+function resetRace(){
+  pos=0; playerX=0; speed=0; lap=1; energy=1; boostT=0;
+  prevLaneX=0; bolts=[];
+  boostMeter=1; boostRamp=0; boostIdle=9; boosting=false; wasBoosting=false; boostEnv=0;
+  craftY=groundAt(0); vy=0; airH=0; airborne=false; prevGroundY=craftY; landT=0; camYsmooth=craftY;
+  coinFx=[]; coinPop=0;                       // gold (coinCount) persists across runs now
+  rockets=[]; booms=[]; rocketAmmo=rocketMax(); rocketReloadT=0; rcd=0;
+  raceStart=performance.now(); lapStart=raceStart;
+  for(const o of obstacles){ o.broken=false; o.breakT=0;
+    o.maxHp=(o.hue===135?targetHP[0]:o.hue===210?targetHP[1]:targetHP[2]); o.hp=o.maxHp; }
+  cars=[];
+  for(let i=0;i<totalCars-1;i++){
+    cars.push({
+      pos:(i+1)*segLen*8 % trackLen,
+      x:(Math.random()*1.4-0.7),
+      spd:maxSpeed*(0.70+Math.random()*0.17),
+      hue:[280,200,40,320,150][i%5],
+      slowT:0, hp:100, maxHp:100, hitT:0, deadT:0
+    });
+  }
+}
+
+// ---- input ----
+const keys={};
+addEventListener('keydown',e=>{ keys[e.code]=true; if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code))e.preventDefault(); });
+addEventListener('keyup',e=>{ keys[e.code]=false; });
+// Left analog stick: X = steer, push forward = throttle, pull back = brake. Right pad = fire both lasers.
+// True zero = NO finger on the pad. Any contact steers proportionally to its size.
+let touchBoost=false;
+let laserL=false, laserR=false, lcdL=0, lcdR=0;   // laser held flags + fire cooldowns
+let bolts=[];                                      // in-flight laser pulses
+let prevLaneX=0;                                   // craft lane last frame, so bolts can slide sideways with the craft
+// ---- rockets weapon ----
+let rockets=[], booms=[];                          // in-flight rockets + explosion visuals
+let rocketAmmo=6, rocketReloadT=0, rcd=0, rocketBtnDown=false;
+let jumpReq=false;   // set by the jump button; consumed once when grounded
+let fireJumpRadius=1.2; // press the FIRE pad with a touch radiusY over this => jump instead of fire
+let fireBoostRadius=1.2; // press the STEER pad with a touch radiusY over this => boost while held
+let padBoost=false;      // boost engaged by a broad press on the steer pad (separate from the 🔥 button)
+let jumpArc=false;   // true while in a button-jump (uses punchier gravity)
+let gapCd=0;         // brief cooldown after clipping a gap so it doesn't re-trigger across the hole's width
+// ---- upgrades & gold economy (persists across runs) ----
+let upg={dmg:0,rate:0,bolt:0,range:0,batt:0,homing:0,blast:0};
+const UPGRADES=[
+  {key:'dmg',   name:'Laser Damage +5',     cost:50,  max:8},
+  {key:'rate',  name:'Double Fire Rate',    cost:75,  max:1},
+  {key:'bolt',  name:'+1 Laser Bolt',       cost:100, max:3},
+  {key:'range', name:'Laser Range +50',     cost:50,  max:5},
+  {key:'homing',name:'Homing Rockets',      cost:250, max:1},
+  {key:'blast', name:'Bigger Blast Radius', cost:100, max:3},
+];
+function effDmg(){ return laserDmg + 5*upg.dmg; }
+function effFireGap(){ return fireGap*(upg.rate?0.5:1); }
+function effCount(){ return Math.min(6, Math.max(1, laserCount)); }   // laserCount IS the beam count, everywhere
+// ---- one lateral layout, shared by the bolts, the 3D cannons and the cockpit barrels ----
+// The lasers' left/right positions are defined here in LANE units (the same space the bolts travel in),
+// so everything that needs to line up with them converts FROM this. HS ≈ "over the jets".
+function laserLanes(n){
+  const HS=0.05;
+  if(n<=1) return [0];
+  if(n===2) return [-0.78*HS, 0.78*HS];
+  if(n===3) return [-HS, 0, HS];
+  const a=[]; for(let i=0;i<n;i++) a.push(-HS + (2*HS)*(i/(n-1))); return a;
+}
+// Road half-width in screen px at the craft's depth (holds in every view; depends only on cam height).
+// A lane offset `off` lands `off*craftRoadHalfW()` px sideways from the craft — the conversion that ties
+// the cannons and barrels to the bolts.
+function craftRoadHalfW(){ return 0.34*H*roadW/camHeight; }
+const MUZZLE_F=0.737;   // how a cannon's model-x maps to screen px in draw3DCar (focal at the muzzle)
+function effRange(){ return laserRange + 50*upg.range; }
+function rocketMax(){ return 6; }   // rockets are unlimited now; kept so resetRace stays happy
+function rocketDmg(){ return rocketDmgBase; }
+function rocketBlastU(){ return rocketBlastR + 0.20*upg.blast; }
+function rocketBlastZ(){ return segLen*(rocketBlastR*12 + 2*upg.blast); }
+function loadUpg(){ try{ const p=JSON.parse(localStorage.getItem('nerve_upg')||'{}');
+  if(p.upg) upg=Object.assign(upg,p.upg); if(typeof p.gold==='number') coinCount=p.gold; }catch(e){}
+  rocketAmmo=rocketMax(); }
+function saveUpg(){ try{ localStorage.setItem('nerve_upg', JSON.stringify({upg,gold:coinCount})); }catch(e){} }
+function buyUpg(key){ const u=UPGRADES.find(x=>x.key===key); if(!u) return;
+  if(upg[key]>=u.max || coinCount<u.cost) return;
+  coinCount-=u.cost; upg[key]++;
+  if(key==='bolt'){ laserCount=Math.min(6, laserCount+1); saveTestPrefs(); }   // beams = laserCount, so bump it
+  saveUpg(); renderShop(); }
+let flapL=0, flapR=0;     // airbrake flap deploy 0..1 per side (for the visual)
+
+// Prefer radiusY: rolling a thumb forward/back changes the vertical contact length
+// far more than the horizontal, so Y gives the widest, finest control range.
+function contactRadius(t){
+  if(!t) return 0;
+  const ry=t.radiusY||0, rx=t.radiusX||0;
+  return ry>0.05 ? ry : (rx>0.05 ? rx : 0);   // Y first, X fallback (small decimals)
+}
+
+// Simple, direct mapping: steer = radiusY / maxRadius, clamped 0..1.
+// Light touch -> gentle drift; touch at/above maxRadius -> full lock. Finger off -> 0.
+let maxRadius = 1.8;
+function radiusToSteer(r){ return Math.max(0, Math.min(1, r/maxRadius)); }
+
+// ---- Breach-style canvas sliders (label + value inside the bar, hatched fill,
+//      dark grip thumb that goes translucent over the text) ----
+function hexA(h,a){ const c=hexRGB(h); return 'rgba('+c[0]+','+c[1]+','+c[2]+','+a+')'; }
+function darken(h,f){ const c=hexRGB(h); return 'rgb('+(c[0]*(1-f)|0)+','+(c[1]*(1-f)|0)+','+(c[2]*(1-f)|0)+')'; }
+function roundRect(c,x,y,w,h,r){ r=Math.min(r,w/2,h/2); c.beginPath();
+  c.moveTo(x+r,y); c.arcTo(x+w,y,x+w,y+h,r); c.arcTo(x+w,y+h,x,y+h,r);
+  c.arcTo(x,y+h,x,y,r); c.arcTo(x,y,x+w,y,r); c.closePath(); }
+function buildSlider(mount, o){
+  const color=o.color||'#9dff3a', fmt=o.format||(v=>v.toFixed(0));
+  mount.innerHTML='';
+  const cv=document.createElement('canvas');
+  cv.style.cssText='position:absolute;inset:0;width:100%;height:100%;pointer-events:none;';
+  const inp=document.createElement('input');
+  inp.type='range'; inp.min=o.min; inp.max=o.max; inp.step=o.step; inp.value=o.value;
+  inp.style.cssText='position:absolute;inset:0;width:100%;height:100%;opacity:0;margin:0;'
+    +'cursor:ew-resize;-webkit-appearance:none;appearance:none;background:transparent;';
+  mount.appendChild(cv); mount.appendChild(inp);
+  function draw(){
+    const r=mount.getBoundingClientRect();
+    const W=Math.max(40,Math.round(r.width)), H=Math.max(18,Math.round(r.height));
+    const dpr=Math.min(2,window.devicePixelRatio||1);
+    cv.width=W*dpr; cv.height=H*dpr;
+    const c=cv.getContext('2d'); c.setTransform(dpr,0,0,dpr,0,0); c.clearRect(0,0,W,H);
+    const span=(+inp.max)-(+inp.min), pct=span>0?(parseFloat(inp.value)-(+inp.min))/span:0;
+    const PAD=2,R=4,th=H-4,ty=2,hw=12, hx=Math.round(hw/2+(W-hw)*pct);
+    // track outline + faint fill
+    roundRect(c,PAD,ty,W-2*PAD,th,R); c.fillStyle=hexA(color,0.08); c.fill();
+    c.strokeStyle=darken(color,0.25); c.lineWidth=1.5; c.stroke();
+    // hatched fill from left up to the handle
+    const fw=hx-PAD;
+    if(fw>0){ c.save(); roundRect(c,PAD,ty,fw,th,R); c.clip();
+      c.globalAlpha=0.35; c.fillStyle=color; c.fillRect(PAD,ty,fw,th);
+      c.globalAlpha=0.5; c.strokeStyle=color; c.lineWidth=1.2;
+      for(let xi=PAD-th; xi<PAD+fw+th; xi+=6){ c.beginPath(); c.moveTo(xi,ty); c.lineTo(xi+th,ty+th); c.stroke(); }
+      c.globalAlpha=1; c.restore(); }
+    // thumb — semi-transparent dark grip with lines
+    const hX=Math.round(hx-hw/2);
+    c.globalAlpha=0.82; c.fillStyle='#0c0c14'; roundRect(c,hX,ty-1,hw,th+2,2); c.fill();
+    c.globalAlpha=1; c.strokeStyle='#000'; c.lineWidth=1; c.stroke();
+    c.strokeStyle=hexA(color,0.7);
+    [-3,0,3].forEach(dy=>{ c.beginPath(); c.moveTo(hX+3,H/2+dy); c.lineTo(hX+hw-3,H/2+dy); c.stroke(); });
+    // label + value drawn on top so they're always readable
+    c.font='700 10px Orbitron, sans-serif'; c.textBaseline='middle'; c.shadowColor='#000'; c.shadowBlur=3;
+    c.fillStyle=color; c.textAlign='left';  c.fillText(o.label, 8, H/2+0.5);
+    c.fillStyle='#fff';  c.textAlign='right'; c.fillText(fmt(parseFloat(inp.value)), W-8, H/2+0.5);
+    c.shadowBlur=0;
+  }
+  inp.addEventListener('input',()=>{ draw(); if(o.onInput) o.onInput(parseFloat(inp.value)); });
+  inp.addEventListener('touchstart',e=>e.stopPropagation(),{passive:true});
+  if(typeof ResizeObserver!=='undefined') new ResizeObserver(draw).observe(mount);
+  window.addEventListener('resize',draw);
+  requestAnimationFrame(draw); setTimeout(draw,120); setTimeout(draw,500);
+  return {draw};
+}
+function goMenu(){ document.getElementById('finish').style.display='none';
+  document.getElementById('start').style.display='flex'; state='menu'; silenceEngine(); }
+document.getElementById('menuBtn').addEventListener('click',goMenu);
+
+// ---- upgrade shop ----
+function renderShop(){
+  const sg=document.getElementById('shopGold'); if(sg) sg.textContent=coinCount;
+  const list=document.getElementById('shopList'); if(!list) return; list.innerHTML='';
+  for(const u of UPGRADES){
+    const lv=upg[u.key], maxed=lv>=u.max, afford=coinCount>=u.cost && !maxed;
+    const row=document.createElement('div');
+    row.className='shopRow'+(maxed?' maxed':(afford?'':' poor'));
+    const lvTxt = u.max>1 ? ('Lv '+lv+'/'+u.max) : (lv?'OWNED':'');
+    row.innerHTML='<div class="srName">'+u.name+'</div><div class="srLv">'+lvTxt+'</div>'
+      +'<div class="srCost">'+(maxed?'MAX':(u.cost+' ◉'))+'</div>';
+    if(afford) row.addEventListener('click',()=>buyUpg(u.key));
+    list.appendChild(row);
+  }
+  const cv=document.getElementById('coinVal'); if(cv) cv.textContent=coinCount;
+}
+function openShop(){ document.getElementById('start').style.display='none';
+  document.getElementById('shopUI').style.display='flex'; renderShop(); }
+function closeShop(){ document.getElementById('shopUI').style.display='none';
+  document.getElementById('start').style.display='flex'; }
+document.getElementById('upgBtn').addEventListener('click',openShop);
+document.getElementById('shopClose').addEventListener('click',closeShop);
+{ const rb=document.getElementById('shopReset'); if(rb) rb.addEventListener('click',()=>{
+  if(confirm('Reset all upgrades back to level 0? (Coins are kept.)')){
+    laserCount=Math.max(1, laserCount - upg.bolt); saveTestPrefs();   // peel back the upgrade-added beams
+    upg={dmg:0,rate:0,bolt:0,range:0,batt:0,homing:0,blast:0}; saveUpg(); renderShop();
+  }
+}); }
+// rocket fire button
+(function(){ const rb=document.getElementById('rocketBtn'); if(!rb) return;
+  const on=e=>{e.preventDefault(); initAudio(); rocketBtnDown=true;}, off=e=>{e.preventDefault(); rocketBtnDown=false;};
+  rb.addEventListener('touchstart',on,{passive:false}); rb.addEventListener('touchend',off,{passive:false});
+  rb.addEventListener('touchcancel',off,{passive:false});
+  rb.addEventListener('mousedown',on); rb.addEventListener('mouseup',off); rb.addEventListener('mouseleave',off);
+})();
+loadUpg();
+
+const padL={steer:0,down:false};   // right stick: X=steer (position), thumb down=full gas
+function bindStick(id, pad){
+  const el=document.getElementById(id);
+  const arrow=el.querySelector('.arrow');
+  const STEER=40;                       // thumb travel for full left/right
+  let sx=null;
+  function apply(){
+    if(!arrow) return;
+    const thr=pad.down?1:0;
+    const mag=Math.max(Math.abs(pad.steer), thr);
+    arrow.style.transform='translate('+(pad.steer*18).toFixed(1)+'px,0) scale('+(1+mag*0.3)+')';
+    arrow.style.boxShadow='0 0 '+(10+mag*28)+'px rgba(0,255,255,'+(0.3+mag*0.6)+')';
+    arrow.style.borderColor='rgba(0,255,255,'+(0.4+mag*0.5)+')';
+  }
+  function read(e){
+    const t=(e.targetTouches&&e.targetTouches.length)?e.targetTouches[0]:e.changedTouches[0];
+    if(!t) return;
+    if(sx===null) sx=t.clientX;
+    pad.down=true;                                       // thumb on the stick = foot on the gas
+    pad.steer=Math.max(-1,Math.min(1,(t.clientX-sx)/STEER));   // position steering
+    apply();
+  }
+  function clear(){ pad.steer=0; pad.down=false; sx=null; apply(); }
+  function release(e){ if(e.targetTouches&&e.targetTouches.length) read(e); else clear(); }
+  let boostId=null;
+  // ONE passive touchstart, structured exactly like the fire pad: read the radius FIRST, then start steering.
+  el.addEventListener('touchstart',e=>{
+    const t=e.changedTouches[0];
+    const r=radiusOf(t); dbgTouch('R',t);
+    if(boostId===null && r>0 && r > fireBoostRadius){ boostId=t.identifier; padBoost=true; initAudio(); }   // broad press => boost (needs a real reading)
+    read(e);                                                                                                // normal steering always
+  },{passive:true});
+  el.addEventListener('touchmove', read,{passive:true});
+  el.addEventListener('touchend', e=>{
+    if(boostId!==null){ for(const t of e.changedTouches){ if(t.identifier===boostId){ boostId=null; padBoost=false; break; } } }
+    release(e);
+  },{passive:true});
+  el.addEventListener('touchcancel',()=>{ boostId=null; padBoost=false; clear(); },{passive:true});
+  // desktop fallback: hold mouse = gas, drag left/right to steer
+  el.addEventListener('mousedown',e=>{ sx=e.clientX; pad.down=true; apply(); });
+  window.addEventListener('mousemove',e=>{ if(sx===null) return; pad.steer=Math.max(-1,Math.min(1,(e.clientX-sx)/STEER)); apply(); });
+  window.addEventListener('mouseup',()=>{ if(sx!==null) clear(); });
+}
+function dbgTouch(tag,t){ const d=document.getElementById('padDbg'); if(!d) return;
+  const r=radiusOf(t), f=v=>(v==null?'·':(+v).toFixed(2));
+  d.textContent=tag+' '+(r<0?'NO-SIZE':r.toFixed(2))+'  [rY '+f(t.radiusY)+' rX '+f(t.radiusX)+' fc '+f(t.force)+']'; }
+// contact radius — radius fields ONLY. No force fallback: on this device force reports a near-constant,
+// which would make every press read as a broad press. If no real size is reported we return -1 and the
+// caller just does the plain action (fire / steer), never an accidental jump / boost.
+function radiusOf(t){
+  if(t.radiusY!=null && t.radiusY>0) return t.radiusY;
+  if(t.webkitRadiusY!=null && t.webkitRadiusY>0) return t.webkitRadiusY;
+  if(t.radiusX!=null && t.radiusX>0) return t.radiusX;
+  if(t.webkitRadiusX!=null && t.webkitRadiusX>0) return t.webkitRadiusX;
+  return -1;
+}
+function bindFire(id){
+  const el=document.getElementById(id);
+  const arrow=el.querySelector('.arrow');
+  let fireId=null;
+  function set(on){ laserL=on; laserR=on;
+    if(arrow){ arrow.style.boxShadow=on?'0 0 28px rgba(255,80,110,.9)':''; arrow.style.transform=on?'scale(.9)':''; } }
+  el.addEventListener('touchstart',e=>{                 // PASSIVE: never preventDefault — that's what keeps the radius alive
+    const t=e.changedTouches[0]; fireId=t.identifier;
+    const r=radiusOf(t); dbgTouch('L',t);
+    if(!airborne && r>0 && r > fireJumpRadius){ initAudio(); jumpReq=true; }   // broad/flat press jumps — only with a real size reading
+    else set(true);                                                            // airborne, no reading, or a normal press => fire
+  },{passive:true});
+  function endTouch(e){ for(const t of e.changedTouches){ if(t.identifier===fireId){ fireId=null; set(false); return; } } }
+  el.addEventListener('touchend',endTouch);
+  el.addEventListener('touchcancel',endTouch);
+  // desktop fallback (no touch radius available): plain fire
+  el.addEventListener('mousedown',()=>set(true));
+  window.addEventListener('mouseup',()=>{ if(laserL) set(false); });
+}
+bindStick('right', padL);
+bindFire('left');
+document.addEventListener('contextmenu', e=>{ if(!/^(INPUT|TEXTAREA)$/.test(e.target.tagName)) e.preventDefault(); });
+
+function bindBtn(id,set){
+  const el=document.getElementById(id);
+  el.addEventListener('touchstart',e=>{e.preventDefault();set(true);},{passive:false});
+  el.addEventListener('touchend',e=>{e.preventDefault();set(false);},{passive:false});
+  el.addEventListener('mousedown',()=>set(true));
+  el.addEventListener('mouseup',()=>set(false));
+  el.addEventListener('mouseleave',()=>set(false));
+}
+bindBtn('boost',v=>touchBoost=v);
+bindBtn('jump',v=>{ if(v){ initAudio(); jumpReq=true; } });
+(function(){ let v=1; try{ const s=localStorage.getItem('nerve_view'); if(s!==null) v=parseInt(s,10)||0; }catch(e){} setView(v); })();
+{ const vb=document.getElementById('viewBtn'); if(vb) vb.addEventListener('click',e=>{ e.preventDefault(); setView(viewIdx+1); }); }
+(function(){
+  const b=document.getElementById('obsToggle');
+  b.addEventListener('click',()=>{
+    obstaclesOn=!obstaclesOn;
+    b.textContent='OBST '+(obstaclesOn?'ON':'OFF');
+    b.classList.toggle('off',!obstaclesOn);
+  });
+})();
+
+document.getElementById('playBtn').onclick=()=>{ customTrack=false; startGame(); };
+document.getElementById('playBtn2').onclick=startGame;
+document.getElementById('editBtn').addEventListener('click',enterEditor);
+document.getElementById('edBack').addEventListener('click',exitEditor);
+document.getElementById('edPlay').addEventListener('click',playEditorTrack);
+document.getElementById('edIns').addEventListener('click',()=>{ insertMode=!insertMode; renderEditor(); });
+document.getElementById('edDel').addEventListener('click',()=>{ if(selIdx>=0){ trackSeq.splice(selIdx,1); selIdx=-1; } else trackSeq.pop(); saveTrack(); renderEditor(); });
+document.getElementById('edUndo').addEventListener('click',()=>{ trackSeq.pop(); if(selIdx>=trackSeq.length) selIdx=-1; saveTrack(); renderEditor(); });
+document.getElementById('edClear').addEventListener('click',()=>{ trackSeq=[]; selIdx=-1; insertMode=false; saveTrack(); renderEditor(); });
+// ---- audio: jet engine hum (thrust/speed driven) + boost whoosh ----
+// ---- selectable jet voices (tuned in the bench, used live) ----
+let selJet=4, jetPitch=2.2, jetVol=0.1, jetVar=0.65;
+const JET_VOICES=[
+  {wave:'sawtooth', det:1.012, base:55, span:250, subMul:0.5, subLvl:1.0, lpBase:380, lpThr:1900, lpSp:1100, nHz:420,  nQ:0.6, nLvl:1.0},
+  {wave:'triangle', det:1.008, base:60, span:230, subMul:0.5, subLvl:0.8, lpBase:600, lpThr:1700, lpSp:1000, nHz:700,  nQ:1.2, nLvl:1.2},
+  {wave:'square',   det:1.020, base:48, span:240, subMul:0.5, subLvl:1.2, lpBase:300, lpThr:1500, lpSp:900,  nHz:300,  nQ:0.8, nLvl:1.6},
+  {wave:'sawtooth', det:1.015, base:80, span:300, subMul:0.5, subLvl:0.5, lpBase:900, lpThr:2200, lpSp:1400, nHz:1300, nQ:2.0, nLvl:1.0},
+  {wave:'sawtooth', det:1.010, base:42, span:200, subMul:0.5, subLvl:1.5, lpBase:300, lpThr:1400, lpSp:800,  nHz:220,  nQ:0.4, nLvl:1.3},
+];
+function applyJetVoice(){ if(!audio) return; const V=JET_VOICES[selJet]||JET_VOICES[0];
+  audio.o1.type=V.wave; audio.o2.type=V.wave; if(audio.sg) audio.sg.gain.value=V.subLvl; }
+let audio=null;
+function initAudio(){
+  if(audio){ audio.ctx.resume&&audio.ctx.resume(); return; }
+  try{
+    const C=window.AudioContext||window.webkitAudioContext; if(!C) return;
+    const ctx=new C();
+    const master=ctx.createGain(); master.gain.value=0; master.connect(ctx.destination);
+    const shatterBus=ctx.createGain(); shatterBus.gain.value=shatterVol; shatterBus.connect(master);
+    const hitBus=ctx.createGain(); hitBus.gain.value=hitVol; hitBus.connect(master);
+    const laserBus=ctx.createGain(); laserBus.gain.value=laserVol; laserBus.connect(master);
+    const o1=ctx.createOscillator(); o1.type='sawtooth'; o1.frequency.value=70;
+    const o2=ctx.createOscillator(); o2.type='sawtooth'; o2.frequency.value=71.5;
+    const sub=ctx.createOscillator(); sub.type='sine'; sub.frequency.value=38;
+    const lp=ctx.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=500;
+    const eg=ctx.createGain(); eg.gain.value=0.0;
+    const sg=ctx.createGain(); sg.gain.value=1;                 // sub level (per-voice)
+    o1.connect(lp); o2.connect(lp); lp.connect(eg); sub.connect(sg); sg.connect(eg); eg.connect(master);
+    const buf=ctx.createBuffer(1,ctx.sampleRate,ctx.sampleRate), d=buf.getChannelData(0);
+    for(let i=0;i<d.length;i++) d[i]=Math.random()*2-1;
+    const noise=ctx.createBufferSource(); noise.buffer=buf; noise.loop=true;
+    const bp=ctx.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value=420; bp.Q.value=0.6;
+    const ng=ctx.createGain(); ng.gain.value=0; noise.connect(bp); bp.connect(ng); ng.connect(master);
+    // variance LFOs: lfo flutters the filter cutoff (whine wobble), lfo2 adds a slight pitch vibrato
+    const lfo=ctx.createOscillator(); lfo.type='sine'; lfo.frequency.value=6.3;
+    const lfoG=ctx.createGain(); lfoG.gain.value=0; lfo.connect(lfoG); lfoG.connect(lp.frequency);
+    const lfo2=ctx.createOscillator(); lfo2.type='sine'; lfo2.frequency.value=2.1;
+    const lfo2G=ctx.createGain(); lfo2G.gain.value=0; lfo2.connect(lfo2G); lfo2G.connect(o1.frequency); lfo2G.connect(o2.frequency);
+    o1.start(); o2.start(); sub.start(); noise.start(); lfo.start(); lfo2.start();
+    master.gain.linearRampToValueAtTime(0.45, ctx.currentTime+0.4);
+    audio={ctx,master,o1,o2,sub,lp,eg,ng,bp,sg,lfo,lfoG,lfo2,lfo2G,shatterBus,hitBus,laserBus};
+    applyJetVoice();
+  }catch(e){}
+}
+function updateAudio(thrust,spd){
+  if(!audio) return; const t=audio.ctx.currentTime, sp=spd/maxSpeed;
+  const V=JET_VOICES[selJet]||JET_VOICES[0];
+  const bf = (1 + 0.45*boostEnv)*jetPitch;   // boost + tunable pitch
+  const bg = 0.12*boostEnv;
+  const drive = Math.min(1, sp*(0.45+0.55*thrust) + 0.35*boostEnv);   // how "maxed out" the jet is
+  const f=(V.base+sp*V.span)*bf;
+  audio.o1.frequency.setTargetAtTime(f,t,0.05);
+  audio.o2.frequency.setTargetAtTime(f*V.det,t,0.05);
+  audio.sub.frequency.setTargetAtTime(f*V.subMul,t,0.05);
+  audio.lp.frequency.setTargetAtTime((V.lpBase+thrust*V.lpThr+sp*V.lpSp)*bf,t,0.05);
+  // amplitude shimmer (random per frame, depth grows with drive & variance)
+  const sh = 1 + jetVar*0.12*drive*(Math.random()*2-1);
+  audio.eg.gain.setTargetAtTime((0.04+thrust*0.16+bg)*jetVol*sh,t,0.06);
+  audio.ng.gain.setTargetAtTime((0.015+sp*0.07+bg*0.5)*V.nLvl*jetVol*(1+jetVar*0.2*drive*(Math.random()*2-1)),t,0.06);
+  if(audio.bp){ audio.bp.frequency.setTargetAtTime(V.nHz*bf,t,0.08); audio.bp.Q.setTargetAtTime(V.nQ,t,0.08); }
+  // variance: flutter the filter & pitch, with rates that wander so it never sits on one steady tone
+  if(audio.lfoG){
+    audio.lfoG.gain.setTargetAtTime(jetVar*260*drive,t,0.12);
+    audio.lfo2G.gain.setTargetAtTime(jetVar*3.0*drive*bf,t,0.12);
+    audio.lfo.frequency.setTargetAtTime(5+Math.random()*4,t,0.5);
+    audio.lfo2.frequency.setTargetAtTime(1.4+Math.random()*2.2,t,0.7);
+  }
+}
+function silenceEngine(){
+  if(!audio) return; const t=audio.ctx.currentTime;
+  audio.eg.gain.setTargetAtTime(0,t,0.08);
+  audio.ng.gain.setTargetAtTime(0,t,0.08);
+}
+// stop the audio when the tab is backgrounded or the page is closed (the render loop
+// pauses when hidden, so otherwise the engine would keep droning)
+document.addEventListener('visibilitychange',()=>{
+  if(!audio) return;
+  if(document.hidden){ try{audio.ctx.suspend();}catch(e){} }
+  else if(state==='play'){ try{audio.ctx.resume();}catch(e){} }
+});
+window.addEventListener('pagehide',()=>{ if(audio){ try{audio.ctx.close();}catch(e){} audio=null; } });
+function boostSound(){
+  if(!audio) return; const ctx=audio.ctx,t=ctx.currentTime;
+  const buf=ctx.createBuffer(1,Math.floor(ctx.sampleRate*0.6),ctx.sampleRate), d=buf.getChannelData(0);
+  for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*(1-i/d.length);
+  const src=ctx.createBufferSource(); src.buffer=buf;
+  const bp=ctx.createBiquadFilter(); bp.type='bandpass'; bp.Q.value=1.1;
+  bp.frequency.setValueAtTime(280,t); bp.frequency.exponentialRampToValueAtTime(3200,t+0.45);
+  const g=ctx.createGain(); g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(0.32,t+0.04);
+  g.gain.exponentialRampToValueAtTime(0.001,t+0.6);
+  src.connect(bp); bp.connect(g); g.connect(_dest()); src.start(t); src.stop(t+0.62);
+}
+
+let customTrack=false, lastCustomSecs=null;
+function startGame(){
+  document.getElementById('start').style.display='none';
+  document.getElementById('finish').style.display='none';
+  initAudio(); applyJetVoice();
+  if(customTrack && lastCustomSecs) buildTrack(lastCustomSecs, 0.62); else buildTrack();
+  resetRace(); state='play';
+}
+
+// ================= TRACK EDITOR =================
+// Each piece compiles to one or more [segments, curve, hillDelta] sections (the same format the
+// track builder uses). Curve only bends the road sideways (pseudo-3D) — there are no true corners.
+const PIECES={
+  str_s:{name:'STR ·',   col:'#8aa0b8', secs:[[24,0,0]]},
+  str_m:{name:'STR —',   col:'#8aa0b8', secs:[[44,0,0]]},
+  str_l:{name:'STR ══',  col:'#8aa0b8', secs:[[72,0,0]]},
+  swl:  {name:'SWEEP L',  col:'#39d0ff', secs:[[48,-2.4,0]]},
+  swr:  {name:'SWEEP R',  col:'#39d0ff', secs:[[48,2.4,0]]},
+  hl:   {name:'HARD L',   col:'#ff5bb0', secs:[[40,-4.6,0]]},
+  hr:   {name:'HARD R',   col:'#ff5bb0', secs:[[40,4.6,0]]},
+  sl:   {name:'S-BEND L', col:'#b58cff', secs:[[30,-3.0,0],[30,3.0,0]]},
+  sr:   {name:'S-BEND R', col:'#b58cff', secs:[[30,3.0,0],[30,-3.0,0]]},
+  up:   {name:'CREST ▲',  col:'#ffc34d', secs:[[44,0,1400]]},
+  dn:   {name:'DIP ▼',    col:'#56e0c0', secs:[[44,0,-1400]]},
+  upb:  {name:'BIG CREST ▲▲', col:'#ffd56a', secs:[[52,0,2800]]},
+  dnb:  {name:'BIG DIP ▼▼',   col:'#7ff0d6', secs:[[52,0,-2800]]},
+  cl:   {name:'CLIMB+L',  col:'#9be84d', secs:[[48,-2.6,1600]]},
+  cr:   {name:'CLIMB+R',  col:'#9be84d', secs:[[48,2.6,1600]]},
+  dl:   {name:'DIVE+L',   col:'#4dc9e8', secs:[[48,-2.6,-1600]]},
+  dr:   {name:'DIVE+R',   col:'#4dc9e8', secs:[[48,2.6,-1600]]},
+  jmp:  {name:'JUMP ▲▼',  col:'#ff8a3a', secs:[[20,0,1300],[20,0,-1500]]},
+  jmpb: {name:'BIG JUMP ⤒',col:'#ff6a2a', secs:[[24,0,2200],[22,0,-2700]]},
+};
+const PIECE_ORDER=['str_s','str_m','str_l','swl','swr','hl','hr','sl','sr','up','dn','upb','dnb','cl','cr','dl','dr','jmp','jmpb'];
+const MIN_TRACK_SEGS=520;     // must comfortably exceed drawDist so the lap wrap projects cleanly
+let trackSeq=[];
+function loadTrack(){ try{ const j=localStorage.getItem('nerve_track'); if(j){ const a=JSON.parse(j); if(Array.isArray(a)) trackSeq=a.filter(k=>PIECES[k]); } }catch(e){}
+  if(!trackSeq.length) trackSeq=['str_l','swr','str_m','sl','up','swl','str_m','dn','hr','str_l','swl']; }
+function saveTrack(){ try{ localStorage.setItem('nerve_track', JSON.stringify(trackSeq)); }catch(e){} }
+function compileTrack(){ const secs=[]; for(const k of trackSeq){ const P=PIECES[k]; if(P) for(const s of P.secs) secs.push(s.slice()); } return secs; }
+function segCountOf(secs){ let n=0; for(const s of secs) n+=s[0]; return n; }
+function easeIO(p){ return p<.5? 2*p*p : -1+(4-2*p)*p; }
+function drawProfile(){
+  const cv=document.getElementById('trkProfile'); if(!cv) return;
+  const c=cv.getContext('2d'), CW=cv.width, CH=cv.height; c.clearRect(0,0,CW,CH);
+  c.fillStyle='rgba(8,12,22,.95)'; c.fillRect(0,0,CW,CH);
+  c.strokeStyle='rgba(120,160,220,.18)'; c.beginPath(); c.moveTo(0,CH/2); c.lineTo(CW,CH/2); c.stroke();
+  const secs=compileTrack(); const cur=[], yA=[]; let y=0;
+  for(const [num,curve,yd] of secs){ for(let i=0;i<num;i++){ const e=easeIO(i/num); cur.push(curve*e); y+=yd/num; yA.push(y); } }
+  const n=cur.length; if(!n){ return; }
+  // bend = the actual curve each piece applies (right = up, left = down), auto-scaled. Responsive to every bend.
+  let amax=0.4; for(const v of cur) amax=Math.max(amax,Math.abs(v));
+  c.strokeStyle='#39d0ff'; c.lineWidth=2; c.beginPath();
+  for(let i=0;i<n;i++){ const px=i/n*CW, py=CH*0.5-(cur[i]/amax)*CH*0.40; i?c.lineTo(px,py):c.moveTo(px,py); } c.stroke();
+  // elevation, amber
+  let mny=0,mxy=0; for(const v of yA){ if(v<mny)mny=v; if(v>mxy)mxy=v; }
+  const sy=Math.max(1,mxy-mny), cy=(mny+mxy)/2;
+  c.strokeStyle='#ffc34d'; c.lineWidth=2; c.beginPath();
+  for(let i=0;i<n;i++){ const px=i/n*CW, py=CH*0.5-((yA[i]-cy)/sy)*CH*0.40; i?c.lineTo(px,py):c.moveTo(px,py); } c.stroke();
+  c.fillStyle='#39d0ff'; c.font='9px system-ui'; c.textAlign='left'; c.fillText('bend L/R',4,11);
+  c.fillStyle='#ffc34d'; c.fillText('hill up/down',4,CH-4);
+}
+let selIdx=-1, insertMode=false;
+function applyPiece(k){            // palette tap: swap selected, insert after selected, or append
+  if(selIdx>=0 && selIdx<trackSeq.length){
+    if(insertMode){ trackSeq.splice(selIdx+1,0,k); selIdx++; }
+    else trackSeq[selIdx]=k;       // swap in place
+  } else trackSeq.push(k);
+  saveTrack(); renderEditor();
+}
+function renderEditor(){
+  const pal=document.getElementById('edPalette');
+  if(pal && !pal.childElementCount){ for(const k of PIECE_ORDER){ const P=PIECES[k];
+    const b=document.createElement('button'); b.className='pbtn'; b.textContent=P.name; b.style.borderColor=P.col; b.style.color=P.col;
+    b.addEventListener('click',()=>applyPiece(k)); pal.appendChild(b); } }
+  const sl=document.getElementById('seqList');
+  if(sl){ sl.innerHTML=''; trackSeq.forEach((k,idx)=>{ const P=PIECES[k]; const c=document.createElement('div');
+    c.className='chip'+(idx===selIdx?' sel':''); c.textContent=P.name; c.style.background=P.col;
+    c.addEventListener('click',()=>{ selIdx=(selIdx===idx?-1:idx); renderEditor(); }); sl.appendChild(c); }); }
+  const ins=document.getElementById('edIns'); if(ins){ ins.textContent='INSERT: '+(insertMode?'ON':'OFF'); ins.classList.toggle('on',insertMode); }
+  const hint=document.getElementById('edHint');
+  if(hint) hint.textContent = selIdx>=0
+    ? (insertMode?'tap a piece to insert it after the selected tile':'tap a piece to swap the selected tile · or tap DELETE')
+    : 'tap a tile to select it (swap / insert / delete) · tap a piece to add to the end';
+  drawProfile();
+  const secs=compileTrack(), n=segCountOf(secs);
+  const lapS=Math.round((Math.max(n,MIN_TRACK_SEGS)*segLen)/(0.72*maxSpeed));
+  const info=document.getElementById('trkInfo');
+  if(info) info.textContent=trackSeq.length+' pieces · '+n+' seg'+(n<MIN_TRACK_SEGS?' (padded to '+MIN_TRACK_SEGS+')':'')+' · ~'+lapS+'s/lap';
+}
+let trackLoaded=false;
+function enterEditor(){ if(!trackLoaded){ loadTrack(); trackLoaded=true; }
+  document.getElementById('start').style.display='none';
+  document.getElementById('editUI').classList.add('on'); state='editor'; renderEditor(); }
+function exitEditor(){ document.getElementById('editUI').classList.remove('on');
+  document.getElementById('start').style.display='flex'; state='menu'; }
+function playEditorTrack(){
+  let secs=compileTrack(); const n=segCountOf(secs);
+  if(n<MIN_TRACK_SEGS) secs.push([MIN_TRACK_SEGS-n,0,0]);   // pad so the loop is long enough to render
+  customTrack=true; lastCustomSecs=secs;
+  document.getElementById('editUI').classList.remove('on');
+  startGame();
+}
+
+// ================= TEST BENCH (dev) =================
+// Reuses the real drawObstacle / draw3DCar / bolt visuals / sound banks so what
+// you tune here is exactly what ships. Selections persist to localStorage and
+// feed the live race (shatter on kill, hit-tink on a non-killing bolt).
+const TEST_TYPES=[ {hue:135,hp:10,value:3, szMul:0.9 },
+                   {hue:210,hp:20,value:5, szMul:1.06},
+                   {hue:0,  hp:40,value:15,szMul:1.32} ];
+let testType=2, testWeapon=0;
+// tunable params — edited in the bench, applied LIVE in the real race
+let selLaser=3;          // which of the 5 laser sounds
+let laserVol=0.45;       // laser fire volume
+let laserPitch=0.4;      // laser fire pitch
+let boltWidthMul=1.0;    // bolt thickness (x)
+let boltLenMul=1.0;      // bolt streak length (x)
+let laserRange=190;      // how far the bolt travels (in segments) before it's culled
+let fadeFrac=0.02;       // fraction of the flight it spends fading out near max range
+let autoAim=1;           // homing assist strength (0 = off, 1 = current, up to 1.5)
+let laserCount=2;        // 1 or 2 beams
+let fireGap=0.095;       // seconds between pulses (fire rate)
+let shardCount=8;        // shatter shards
+let targetSizeMul=1.0;   // target size (x)
+let targetAlpha=1.0;     // target opacity
+// rocket tunables (bench bases; in-race upgrades layer on top)
+let rocketBlastR=0.42;   // blast radius (lateral + scales the depth of the blast)
+let rocketCount=1;       // rockets fired per volley (1-3)
+let rocketGap=0.12;      // seconds between rocket volleys
+let rocketRange=110;     // segments travelled before it auto-explodes
+let rocketVel=220;       // MAX rocket speed in segments / second (the ramp curve scales it 0..1)
+let rocketDmgBase=30;    // damage each target in the blast takes
+let velPoints=[{x:0.5,y:1.0}];   // velocity-ramp control points (x=flight progress 0..1, y=fraction of max vel)
+let velSel=-1;                   // currently grabbed curve point
+const TEST_LANES=[-0.85, 0, 0.85];   // a small cluster so the rocket blast can clear several at once
+let testTargets = TEST_LANES.map(l=>({lane:l, hue:135, szMul:0.9, hp:10, maxHp:10, value:3, broken:false, breakT:0}));
+function clamp01(v){ return v<0?0:v>1?1:v; }
+// smooth (Catmull-Rom) curve through control points {x,y}, clamped to 0..1 — used by rocket ramp + boost ramp
+function evalCurve(pts,p){
+  if(!pts||!pts.length) return 1;
+  if(pts.length===1) return clamp01(pts[0].y);
+  const s=pts.slice().sort((a,b)=>a.x-b.x);
+  if(p<=s[0].x) return clamp01(s[0].y);
+  if(p>=s[s.length-1].x) return clamp01(s[s.length-1].y);
+  let i=0; while(i<s.length-1 && !(s[i].x<=p && p<s[i+1].x)) i++;
+  const p0=s[Math.max(0,i-1)], p1=s[i], p2=s[i+1], p3=s[Math.min(s.length-1,i+2)];
+  const t=(p-p1.x)/((p2.x-p1.x)||1);
+  const y=0.5*((2*p1.y)+(-p0.y+p2.y)*t+(2*p0.y-5*p1.y+4*p2.y-p3.y)*t*t+(-p0.y+3*p1.y-3*p2.y+p3.y)*t*t*t);
+  return clamp01(y);
+}
+function curveMul(p){ return evalCurve(velPoints,p); }
+let testBolts=[], testFiring=false, testCd=0;
+let testRockets=[], testBooms=[];
+const TEST_TGT_SEG=70;   // notional distance to the bench target (so Distance/Blast can be felt)
+
+function applyTestType(){ const T=TEST_TYPES[testType];
+  for(const o of testTargets){ o.hue=T.hue; o.szMul=T.szMul; o.maxHp=targetHP[testType]; o.value=T.value;
+    o.hp=targetHP[testType]; o.broken=false; o.breakT=0; } }
+
+function settingsObj(){ return {selLaser,selShatter,selHit,selJet,jetPitch,jetVol,jetVar,shatterVol,hitVol,laserVol,laserPitch,
+  testType,testWeapon,laserDmg,targetHP,boltWidthMul,boltLenMul,laserRange,fadeFrac,autoAim,laserCount,fireGap,shardCount,targetSizeMul,targetAlpha,
+  rocketBlastR,rocketCount,rocketGap,rocketRange,rocketVel,rocketDmgBase,velPoints:velPoints.map(p=>({x:p.x,y:p.y})),
+  boostPower,boostDrain,boostRegen,boostDelay,boostPts:boostPts.map(p=>({x:p.x,y:p.y})),BOLT_LIFT,CRAFT_LIFT,laserStyle,aimSeg,jumpHeight,fireJumpRadius,fireBoostRadius}; }
+function applySettings(p){ if(!p||typeof p!=='object') return; const g=(k,d)=>p[k]!=null?p[k]:d;
+  selLaser=g('selLaser',selLaser); selShatter=g('selShatter',selShatter); selHit=g('selHit',selHit);
+  selJet=g('selJet',selJet); jetPitch=g('jetPitch',jetPitch); jetVol=g('jetVol',jetVol); jetVar=g('jetVar',jetVar);
+  shatterVol=g('shatterVol',shatterVol); hitVol=g('hitVol',hitVol);
+  laserVol=g('laserVol',laserVol); laserPitch=g('laserPitch',laserPitch);
+  testType=g('testType',testType); testWeapon=g('testWeapon',testWeapon);
+  laserDmg=g('laserDmg',laserDmg); if(Array.isArray(p.targetHP)&&p.targetHP.length===3) targetHP=p.targetHP.slice();
+  boltWidthMul=g('boltWidthMul',boltWidthMul); boltLenMul=g('boltLenMul',boltLenMul);
+  laserRange=g('laserRange',laserRange); fadeFrac=g('fadeFrac',fadeFrac); autoAim=g('autoAim',autoAim);
+  laserCount=g('laserCount',laserCount); fireGap=g('fireGap',fireGap);
+  shardCount=g('shardCount',shardCount); targetSizeMul=g('targetSizeMul',targetSizeMul); targetAlpha=g('targetAlpha',targetAlpha);
+  rocketBlastR=g('rocketBlastR',rocketBlastR); rocketCount=g('rocketCount',rocketCount); rocketGap=g('rocketGap',rocketGap);
+  rocketRange=g('rocketRange',rocketRange); rocketVel=g('rocketVel',rocketVel); rocketDmgBase=g('rocketDmgBase',rocketDmgBase);
+  if(Array.isArray(p.velPoints)&&p.velPoints.length) velPoints=p.velPoints.map(q=>({x:clamp01(+q.x||0), y:clamp01(+q.y||0)}));
+  boostPower=g('boostPower',boostPower); boostDrain=g('boostDrain',boostDrain); boostRegen=g('boostRegen',boostRegen); boostDelay=g('boostDelay',boostDelay);
+  if(Array.isArray(p.boostPts)&&p.boostPts.length) boostPts=p.boostPts.map(q=>({x:clamp01(+q.x||0), y:clamp01(+q.y||0)}));
+  BOLT_LIFT=g('BOLT_LIFT',BOLT_LIFT); CRAFT_LIFT=g('CRAFT_LIFT',CRAFT_LIFT);
+  laserStyle=g('laserStyle',laserStyle); aimSeg=g('aimSeg',aimSeg); jumpHeight=g('jumpHeight',jumpHeight); fireJumpRadius=g('fireJumpRadius',fireJumpRadius); fireBoostRadius=g('fireBoostRadius',fireBoostRadius);
+  applyVolumes(); applyJetVoice();
+}
+function saveTestPrefs(){ try{ localStorage.setItem('nerve_prefs', JSON.stringify(settingsObj())); }catch(e){} }
+function loadTestPrefs(){ try{ applySettings(JSON.parse(localStorage.getItem('nerve_prefs')||'{}')); }catch(e){} }
+
+function enterTest(){ document.getElementById('start').style.display='none';
+  document.getElementById('finish').style.display='none';
+  document.getElementById('testUI').style.display='flex'; document.body.classList.add('testing');
+  initAudio(); applyJetVoice(); applyVolumes(); applyTestType();
+  resetRace();                          // real track + real targets down range
+  benchMode=true; obstaclesOn=true; laserL=laserR=false; rocketBtnDown=false; cars=[];
+  testFiring=false; testBolts=[]; testRockets=[]; testBooms=[];   // start parked and silent until you hold FIRE
+  state='play';                         // run the REAL game systems, just with the craft parked
+  setTab(testTab); syncTestUI(); }
+function exitTest(){ document.getElementById('testUI').style.display='none'; document.body.classList.remove('testing');
+  benchMode=false; laserL=laserR=false; rocketBtnDown=false;
+  document.getElementById('start').style.display='flex'; state='menu'; }
+
+function testFire(){ if(!audio) return;
+  if(testWeapon===1){   // ROCKET
+    rocketLaunchSound();
+    const N=Math.max(1,Math.min(3,rocketCount));
+    for(let i=0;i<N;i++) testRockets.push({side:(i-(N-1)/2), dist:0, done:false});
+    return;
+  }
+  laserSound();
+  if(laserCount>=3){ testBolts.push({side:0,prog:0}); testBolts.push({side:-1,prog:0}); testBolts.push({side:1,prog:0}); }
+  else if(laserCount===2){ testBolts.push({side:-1,prog:0}); testBolts.push({side:1,prog:0}); }
+  else testBolts.push({side:0,prog:0});
+}
+function testUpdate(dt){
+  updateAudio(0.7, maxSpeed*0.55);   // steady jet whine so voice/pitch can be auditioned live
+  testCd-=dt;
+  const gap = testWeapon===1 ? rocketGap : fireGap;
+  if(testFiring && testCd<=0){ testFire(); testCd=Math.max(0.05,gap); }
+  const C=testTargets[1];   // lasers hit the centre crystal
+  // lasers
+  let dmg=0;
+  for(const b of testBolts){ b.prog+=dt/0.22; if(b.prog>=1 && !b.done){ b.done=true; dmg+=laserDmg; } }
+  testBolts=testBolts.filter(b=>b.prog<1.05);
+  if(dmg>0 && !C.broken){
+    C.hp-=dmg;
+    if(C.hp<=0){ C.broken=true; C.breakT=0.55; shatterSound(); }
+    else hitSound();
+  }
+  // rockets — fly toward the cluster, explode at min(distance,target); blast hits every crystal within the radius
+  const E=Math.min(rocketRange, TEST_TGT_SEG);
+  let exploded=false, rkill=false, rhit=false;
+  for(const r of testRockets){ if(r.done) continue;
+    r.dist += rocketVel * Math.max(0.05, curveMul(Math.min(1, r.dist/E))) * dt;
+    if(r.dist>=E){ r.done=true; exploded=true;
+      testBooms.push({yf:Math.min(1,E/TEST_TGT_SEG), t:0, dur:0.5});
+      const onTarget = rocketRange>=TEST_TGT_SEG || (TEST_TGT_SEG-rocketRange)<=rocketBlastR*12;
+      if(onTarget){ for(const o of testTargets){ if(o.broken) continue;
+        if(Math.abs(o.lane)<=rocketBlastR){ o.hp-=rocketDmg();
+          if(o.hp<=0){ o.broken=true; o.breakT=0.55; rkill=true; } else rhit=true; } } }
+    }
+  }
+  testRockets=testRockets.filter(r=>!r.done);
+  if(exploded){ explosionSound(); if(rkill) shatterSound(); else if(rhit) hitSound(); }
+  for(const b of testBooms) b.t+=dt;
+  testBooms=testBooms.filter(b=>b.t<b.dur);
+
+  for(const o of testTargets){ if(o.breakT>0){ o.breakT-=dt;
+    if(o.breakT<=0 && o.broken){ o.broken=false; o.hp=o.maxHp; } } }
+}
+function testRender(){
+  ctx.fillStyle='#070912'; ctx.fillRect(0,0,W,H);
+  const tx=W*0.5, ty=H*0.36, ex=W*0.5, ey=H*0.74, sz=Math.max(30,H*0.078), spread=sz*2.6;
+  // lane glow from craft up to target
+  const lg=ctx.createLinearGradient(0,ey,0,ty); lg.addColorStop(0,'rgba(60,90,170,.10)'); lg.addColorStop(1,'rgba(60,90,170,0)');
+  ctx.fillStyle=lg; ctx.fillRect(W*0.5-sz*1.4,ty,sz*2.8,ey-ty);
+  // cluster of targets — REAL game renderer (crystal + real shatter animation)
+  for(const o of testTargets){ const x=tx + o.lane*spread; drawObstacle(x, ty, sz, o, 0);
+    if(!o.broken){ const f=Math.max(0,o.hp)/o.maxHp;
+      ctx.fillStyle='rgba(255,255,255,.15)'; ctx.fillRect(x-34,ty-sz*2.4,68,6);
+      ctx.fillStyle='hsl('+(120*f)+',90%,55%)'; ctx.fillRect(x-34,ty-sz*2.4,68*f,6);
+      ctx.fillStyle='#bcdcff'; ctx.font='11px system-ui'; ctx.textAlign='center';
+      ctx.fillText(Math.max(0,Math.ceil(o.hp))+'/'+o.maxHp, x, ty-sz*2.4-6); } }
+  // bolts (red, straight up the centre lane)
+  const ff=Math.max(0.02,fadeFrac);
+  for(const b of testBolts){ const p=Math.min(1,b.prog);
+    const x0=ex+b.side*16, x=x0+(tx+b.side*4-x0)*p, y=ey+(ty-ey)*p, len=(26-12*p)*boltLenMul;
+    ctx.save(); ctx.lineCap='round'; ctx.globalAlpha = p<(1-ff) ? 1 : Math.max(0,(1-p)/ff);
+    ctx.shadowColor='#ff3b6b'; ctx.shadowBlur=12;
+    ctx.strokeStyle='#ff3b6b'; ctx.lineWidth=5*boltWidthMul; ctx.beginPath(); ctx.moveTo(x,y+len); ctx.lineTo(x,y); ctx.stroke();
+    ctx.shadowBlur=4; ctx.strokeStyle='#fff'; ctx.lineWidth=1.8*boltWidthMul; ctx.beginPath(); ctx.moveTo(x,y+len); ctx.lineTo(x,y); ctx.stroke();
+    ctx.restore(); }
+  // rockets (orange, riding up the centre lane) + their explosions
+  for(const r of testRockets){ const yf=Math.min(1, r.dist/TEST_TGT_SEG);
+    const x=ex + r.side*16*(1-yf*0.6), y=ey+(ty-ey)*yf;
+    ctx.save(); ctx.lineCap='round';
+    ctx.strokeStyle='rgba(255,180,60,.85)'; ctx.lineWidth=6; ctx.shadowColor='#ffae00'; ctx.shadowBlur=12;
+    ctx.beginPath(); ctx.moveTo(x,y+20); ctx.lineTo(x,y); ctx.stroke();
+    ctx.shadowColor='#fff'; ctx.shadowBlur=10; ctx.fillStyle='#ffe8a0';
+    ctx.beginPath(); ctx.arc(x,y,5,0,Math.PI*2); ctx.fill(); ctx.restore(); }
+  for(const b of testBooms){ const x=tx, y=ey+(ty-ey)*b.yf;
+    const pr=b.t/b.dur, R=sz*(0.6+3*rocketBlastR)*(0.4+1.3*pr), a=Math.max(0,1-pr);
+    ctx.save();
+    const g=ctx.createRadialGradient(x,y,0,x,y,Math.max(2,R));
+    g.addColorStop(0,'rgba(255,240,180,'+(0.7*a).toFixed(3)+')'); g.addColorStop(0.5,'rgba(255,140,40,'+(0.5*a).toFixed(3)+')'); g.addColorStop(1,'rgba(255,80,30,0)');
+    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(x,y,Math.max(2,R),0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='rgba(255,200,90,'+(0.8*a).toFixed(3)+')'; ctx.lineWidth=Math.max(1,3*(1-pr)); ctx.beginPath(); ctx.arc(x,y,Math.max(2,R*0.9),0,Math.PI*2); ctx.stroke();
+    ctx.restore(); }
+  // emitter craft — REAL game renderer, idling jets
+  draw3DCar(ex, ey, 46, 285, true, 0, 0, 0.5, 0.5, 0, 0);
+}
+
+// ---- test UI wiring ----
+let testTab='sounds';
+const PARAM={
+  laserVol:    {get:()=>laserVol,    set:v=>{laserVol=v; if(audio&&audio.laserBus)audio.laserBus.gain.value=v;}, fmt:v=>Math.round(v*100)+'%'},
+  laserPitch:  {get:()=>laserPitch,  set:v=>laserPitch=v,   fmt:v=>v.toFixed(2)+'x'},
+  shatterVol:  {get:()=>shatterVol, set:v=>{shatterVol=v; if(audio&&audio.shatterBus)audio.shatterBus.gain.value=v;}, fmt:v=>Math.round(v*100)+'%'},
+  hitVol:      {get:()=>hitVol,     set:v=>{hitVol=v;     if(audio&&audio.hitBus)audio.hitBus.gain.value=v;},     fmt:v=>Math.round(v*100)+'%'},
+  laserDmg:    {get:()=>laserDmg,     set:v=>laserDmg=Math.round(v), fmt:v=>''+Math.round(v)},
+  boltWidthMul:{get:()=>boltWidthMul, set:v=>boltWidthMul=v, fmt:v=>v.toFixed(2)+'x'},
+  boltLenMul:  {get:()=>boltLenMul,   set:v=>boltLenMul=v,   fmt:v=>v.toFixed(2)+'x'},
+  laserRange:  {get:()=>laserRange,   set:v=>laserRange=Math.round(v), fmt:v=>Math.round(v)+' seg'},
+  craftLift:   {get:()=>CRAFT_LIFT,    set:v=>CRAFT_LIFT=v,   fmt:v=>Math.round(v)},
+  laserStyle:  {get:()=>laserStyle,    set:v=>laserStyle=Math.round(v), fmt:v=>Math.round(v)?'STRAIGHT':'HOMING'},
+  aimSeg:      {get:()=>aimSeg,        set:v=>aimSeg=Math.round(v), fmt:v=>Math.round(v)+' seg'},
+  craftLane:   {get:()=>playerX,       set:v=>playerX=v, fmt:v=>(v>0.02?'R ':v<-0.02?'L ':'C ')+Math.abs(v).toFixed(2)},
+  fadeFrac:    {get:()=>fadeFrac,     set:v=>fadeFrac=v,     fmt:v=>Math.round(v*260)+'ms'},
+  autoAim:     {get:()=>autoAim,      set:v=>autoAim=v,      fmt:v=>Math.round(v*100)+'%'},
+  jetPitch:    {get:()=>jetPitch,     set:v=>jetPitch=v,     fmt:v=>v.toFixed(2)+'x'},
+  jetVol:      {get:()=>jetVol,       set:v=>jetVol=v,       fmt:v=>Math.round(v*100)+'%'},
+  jetVar:      {get:()=>jetVar,       set:v=>jetVar=v,       fmt:v=>Math.round(v*100)+'%'},
+  fireGap:     {get:()=>fireGap,      set:v=>fireGap=v,      fmt:v=>Math.round(v*1000)+'ms'},
+  shardCount:  {get:()=>shardCount,   set:v=>shardCount=Math.round(v), fmt:v=>''+Math.round(v)},
+  targetSizeMul:{get:()=>targetSizeMul,set:v=>targetSizeMul=v,fmt:v=>v.toFixed(2)+'x'},
+  targetAlpha: {get:()=>targetAlpha,  set:v=>targetAlpha=v,  fmt:v=>Math.round(v*100)+'%'},
+  rocketBlastR:{get:()=>rocketBlastR, set:v=>rocketBlastR=v, fmt:v=>v.toFixed(2)},
+  rocketCount: {get:()=>rocketCount,  set:v=>rocketCount=Math.round(v), fmt:v=>''+Math.round(v)},
+  rocketGap:   {get:()=>rocketGap,    set:v=>rocketGap=v,    fmt:v=>Math.round(v*1000)+'ms'},
+  rocketRange: {get:()=>rocketRange,  set:v=>rocketRange=Math.round(v), fmt:v=>Math.round(v)+' seg'},
+  rocketVel:   {get:()=>rocketVel,    set:v=>rocketVel=Math.round(v), fmt:v=>Math.round(v)+' seg/s'},
+  rocketDmgBase:{get:()=>rocketDmgBase,set:v=>rocketDmgBase=Math.round(v), fmt:v=>''+Math.round(v)},
+  boostPower:  {get:()=>boostPower,  set:v=>boostPower=v,  fmt:v=>Math.round(600*(1+v))+'mph'},
+  jumpHeight:  {get:()=>jumpHeight,  set:v=>jumpHeight=v,  fmt:v=>(v/2224).toFixed(1)+'x'},
+  fireJumpR:   {get:()=>fireJumpRadius, set:v=>fireJumpRadius=v, fmt:v=>v.toFixed(2)},
+  fireBoostR:  {get:()=>fireBoostRadius, set:v=>fireBoostRadius=v, fmt:v=>v.toFixed(2)},
+  boostDrain:  {get:()=>boostDrain,  set:v=>boostDrain=v,  fmt:v=>(v>0?(1/v).toFixed(1):'∞')+'s'},
+  boostRegen:  {get:()=>boostRegen,  set:v=>boostRegen=v,  fmt:v=>(v>0?(1/v).toFixed(1):'∞')+'s'},
+  boostDelay:  {get:()=>boostDelay,  set:v=>boostDelay=v,  fmt:v=>v.toFixed(1)+'s'},
+};
+function setTab(n){ testTab=n;
+  const showLaser  = (n==='weapon' && testWeapon===0);
+  const showRocket = (n==='weapon' && testWeapon===1);
+  const map={ tab_sounds:n==='sounds', tab_laser:showLaser, tab_rocket:showRocket, tab_boost:n==='boost', tab_target:n==='target' };
+  for(const id in map){ const el=document.getElementById(id); if(el) el.style.display=map[id]?'flex':'none'; }
+  document.querySelectorAll('#testUI [data-tab]').forEach(b=>b.classList.toggle('sel',b.dataset.tab===n));
+  if(showRocket) drawVelCurve();
+  if(n==='boost') drawBoostCurve(); }
+function syncSliders(){ document.querySelectorAll('#testUI input[type=range]').forEach(el=>{ const P=PARAM[el.dataset.pk]; if(!P) return;
+  el.value=P.get(); const sv=el.parentElement.querySelector('.sv'); if(sv) sv.textContent=P.fmt(P.get()); }); }
+function syncTestUI(){
+  document.querySelectorAll('#testUI [data-tk]').forEach(b=>{ const k=b.dataset.tk, i=+b.dataset.ti; let on=false;
+    if(k==='w')on=i===testWeapon; else if(k==='t')on=i===testType; else if(k==='l')on=i===selLaser;
+    else if(k==='s')on=i===selShatter; else if(k==='h')on=i===selHit; else if(k==='b')on=i===laserCount; else if(k==='j')on=i===selJet;
+    b.classList.toggle('sel',on); });
+  const hpEl=document.getElementById('hpInput'); if(hpEl) hpEl.value=targetHP[testType];
+  const at=document.getElementById('aimToggle'); if(at){ at.textContent=laserStyle?'STRAIGHT':'HOMING'; at.classList.toggle('sel',laserStyle===1); }
+  syncSliders();
+}
+function drawVelCurve(){
+  const cv=document.getElementById('velCurve'); if(!cv) return;
+  const c=cv.getContext('2d'), CW=cv.width, CH=cv.height; c.clearRect(0,0,CW,CH);
+  c.fillStyle='rgba(12,18,32,.95)'; c.fillRect(0,0,CW,CH);
+  c.strokeStyle='rgba(120,160,220,.16)'; c.lineWidth=1;
+  for(let i=1;i<4;i++){ c.beginPath(); c.moveTo(i*CW/4,0); c.lineTo(i*CW/4,CH); c.stroke();
+    c.beginPath(); c.moveTo(0,i*CH/4); c.lineTo(CW,i*CH/4); c.stroke(); }
+  c.strokeStyle='#ffae00'; c.lineWidth=2; c.shadowColor='#ffae00'; c.shadowBlur=6; c.beginPath();
+  for(let px=0;px<=CW;px+=3){ const y=CH-curveMul(px/CW)*CH; if(px===0)c.moveTo(px,y); else c.lineTo(px,y); }
+  c.stroke(); c.shadowBlur=0;
+  velPoints.forEach((pt,idx)=>{ const x=pt.x*CW, y=CH-pt.y*CH;
+    c.fillStyle=idx===velSel?'#fff':'#9dff3a'; c.beginPath(); c.arc(x,y,idx===velSel?7:5,0,Math.PI*2); c.fill();
+    c.lineWidth=1; c.strokeStyle='#000'; c.stroke(); });
+  c.fillStyle='rgba(180,210,255,.45)'; c.font='9px system-ui'; c.textAlign='left'; c.fillText('max',3,11); c.fillText('0',3,CH-3); }
+function velXY(e){ const cv=document.getElementById('velCurve'), r=cv.getBoundingClientRect();
+  const t=(e.touches&&e.touches[0])?e.touches[0]:e;
+  return { x:clamp01((t.clientX-r.left)/r.width), y:clamp01(1-(t.clientY-r.top)/r.height) }; }
+function velPick(pos){ let best=-1, bd=0.14; velPoints.forEach((pt,i)=>{ const d=Math.hypot(pt.x-pos.x,pt.y-pos.y); if(d<bd){bd=d;best=i;} }); return best; }
+function velAddPoint(){ const xs=velPoints.map(p=>p.x).sort((a,b)=>a-b); const bounds=[0,...xs,1];
+  let bg=-1,bx=0.5; for(let i=0;i<bounds.length-1;i++){ const g=bounds[i+1]-bounds[i]; if(g>bg){bg=g;bx=(bounds[i]+bounds[i+1])/2;} }
+  velPoints.push({x:clamp01(bx), y:curveMul(bx)}); velSel=velPoints.length-1; drawVelCurve(); saveTestPrefs(); }
+function velDelPoint(){ if(velPoints.length<=1) return; const i=velSel>=0?velSel:velPoints.length-1; velPoints.splice(i,1); velSel=-1; drawVelCurve(); saveTestPrefs(); }
+let boostSel=-1;
+function drawBoostCurve(){
+  const cv=document.getElementById('boostCurve'); if(!cv) return;
+  const c=cv.getContext('2d'), CW=cv.width, CH=cv.height; c.clearRect(0,0,CW,CH);
+  c.fillStyle='rgba(12,18,32,.95)'; c.fillRect(0,0,CW,CH);
+  c.strokeStyle='rgba(120,160,220,.16)'; c.lineWidth=1;
+  for(let i=1;i<4;i++){ c.beginPath(); c.moveTo(i*CW/4,0); c.lineTo(i*CW/4,CH); c.stroke();
+    c.beginPath(); c.moveTo(0,i*CH/4); c.lineTo(CW,i*CH/4); c.stroke(); }
+  c.strokeStyle='#9dff3a'; c.lineWidth=2; c.shadowColor='#9dff3a'; c.shadowBlur=6; c.beginPath();
+  for(let px=0;px<=CW;px+=3){ const y=CH-evalCurve(boostPts,px/CW)*CH; if(px===0)c.moveTo(px,y); else c.lineTo(px,y); }
+  c.stroke(); c.shadowBlur=0;
+  boostPts.forEach((pt,idx)=>{ const x=pt.x*CW, y=CH-pt.y*CH;
+    c.fillStyle=idx===boostSel?'#fff':'#0ff'; c.beginPath(); c.arc(x,y,idx===boostSel?7:5,0,Math.PI*2); c.fill();
+    c.lineWidth=1; c.strokeStyle='#000'; c.stroke(); });
+  c.fillStyle='rgba(180,210,255,.45)'; c.font='9px system-ui'; c.textAlign='left'; c.fillText('full',3,11); c.fillText('0',3,CH-3); }
+function bcXY(e){ const cv=document.getElementById('boostCurve'), r=cv.getBoundingClientRect();
+  const t=(e.touches&&e.touches[0])?e.touches[0]:e;
+  return { x:clamp01((t.clientX-r.left)/r.width), y:clamp01(1-(t.clientY-r.top)/r.height) }; }
+function bcPick(pos){ let best=-1, bd=0.14; boostPts.forEach((pt,i)=>{ const d=Math.hypot(pt.x-pos.x,pt.y-pos.y); if(d<bd){bd=d;best=i;} }); return best; }
+function bcAddPoint(){ const xs=boostPts.map(p=>p.x).sort((a,b)=>a-b); const bounds=[0,...xs,1];
+  let bg=-1,bx=0.5; for(let i=0;i<bounds.length-1;i++){ const g=bounds[i+1]-bounds[i]; if(g>bg){bg=g;bx=(bounds[i]+bounds[i+1])/2;} }
+  boostPts.push({x:clamp01(bx), y:evalCurve(boostPts,bx)}); boostSel=boostPts.length-1; drawBoostCurve(); saveTestPrefs(); }
+function bcDelPoint(){ if(boostPts.length<=1) return; const i=boostSel>=0?boostSel:boostPts.length-1; boostPts.splice(i,1); boostSel=-1; drawBoostCurve(); saveTestPrefs(); }
+document.addEventListener('DOMContentLoaded',()=>{
+  loadTestPrefs();
+  const tb=document.getElementById('testBtn'); if(tb) tb.addEventListener('click',enterTest);
+  const bb=document.getElementById('testBack'); if(bb) bb.addEventListener('click',exitTest);
+  document.querySelectorAll('#testUI [data-tab]').forEach(b=>b.addEventListener('click',()=>setTab(b.dataset.tab)));
+  document.querySelectorAll('#testUI [data-tk]').forEach(btn=>{
+    btn.addEventListener('click',()=>{ initAudio(); const k=btn.dataset.tk, i=+btn.dataset.ti;
+      if(k==='l'){ selLaser=i; laserSound(); }
+      else if(k==='s'){ selShatter=i; shatterSound(); }
+      else if(k==='h'){ selHit=i; hitSound(); }
+      else if(k==='t'){ testType=i; applyTestType(); }
+      else if(k==='w'){ testWeapon=i; setTab('weapon'); }
+      else if(k==='b'){ laserCount=i; }
+      else if(k==='j'){ selJet=i; applyJetVoice(); }
+      syncTestUI(); saveTestPrefs(); });
+  });
+  document.querySelectorAll('#testUI input[type=range]').forEach(el=>{ const P=PARAM[el.dataset.pk]; if(!P) return;
+    el.addEventListener('input',()=>{ P.set(parseFloat(el.value)); const sv=el.parentElement.querySelector('.sv'); if(sv) sv.textContent=P.fmt(P.get()); saveTestPrefs(); }); });
+  const hpEl=document.getElementById('hpInput');
+  if(hpEl) hpEl.addEventListener('input',()=>{ let v=parseInt(hpEl.value,10); if(!isFinite(v)) return; v=Math.max(1,Math.min(999,v));
+    targetHP[testType]=v; applyTestType(); saveTestPrefs(); });
+  // velocity-ramp curve editor
+  const vc=document.getElementById('velCurve');
+  if(vc){ let drag=false;
+    const down=e=>{ e.preventDefault(); const pos=velXY(e); velSel=velPick(pos); drag=velSel>=0; drawVelCurve(); };
+    const move=e=>{ if(!drag||velSel<0) return; e.preventDefault(); const pos=velXY(e); velPoints[velSel].x=pos.x; velPoints[velSel].y=pos.y; drawVelCurve(); };
+    const up=()=>{ if(drag){ drag=false; saveTestPrefs(); } };
+    vc.addEventListener('touchstart',down,{passive:false}); vc.addEventListener('touchmove',move,{passive:false}); vc.addEventListener('touchend',up,{passive:false});
+    vc.addEventListener('mousedown',down); window.addEventListener('mousemove',move); window.addEventListener('mouseup',up); }
+  const va=document.getElementById('velAdd'); if(va) va.addEventListener('click',velAddPoint);
+  const vd=document.getElementById('velDel'); if(vd) vd.addEventListener('click',velDelPoint);
+  // boost-ramp curve editor
+  const bc=document.getElementById('boostCurve');
+  if(bc){ let drag=false;
+    const down=e=>{ e.preventDefault(); const pos=bcXY(e); boostSel=bcPick(pos); drag=boostSel>=0; drawBoostCurve(); };
+    const move=e=>{ if(!drag||boostSel<0) return; e.preventDefault(); const pos=bcXY(e); boostPts[boostSel].x=pos.x; boostPts[boostSel].y=pos.y; drawBoostCurve(); };
+    const up=()=>{ if(drag){ drag=false; saveTestPrefs(); } };
+    bc.addEventListener('touchstart',down,{passive:false}); bc.addEventListener('touchmove',move,{passive:false}); bc.addEventListener('touchend',up,{passive:false});
+    bc.addEventListener('mousedown',down); window.addEventListener('mousemove',move); window.addEventListener('mouseup',up); }
+  const ba=document.getElementById('bcAdd'); if(ba) ba.addEventListener('click',bcAddPoint);
+  const bd2=document.getElementById('bcDel'); if(bd2) bd2.addEventListener('click',bcDelPoint);
+  const fb=document.getElementById('testFire');
+  const at=document.getElementById('aimToggle');
+  if(at) at.addEventListener('click',()=>{ laserStyle=laserStyle?0:1;
+    at.textContent=laserStyle?'STRAIGHT':'HOMING'; at.classList.toggle('sel',laserStyle===1); saveTestPrefs(); });
+  if(fb){ const on=e=>{e.preventDefault(); initAudio(); testFiring=true;}, off=e=>{e.preventDefault(); testFiring=false;};
+    fb.addEventListener('touchstart',on,{passive:false}); fb.addEventListener('touchend',off,{passive:false}); fb.addEventListener('touchcancel',off,{passive:false});
+    fb.addEventListener('mousedown',on); fb.addEventListener('mouseup',off); fb.addEventListener('mouseleave',off); }
+  // ---- preset Export / Import ----
+  const ioBox=document.getElementById('ioBox'), ioText=document.getElementById('ioText'),
+        ioTitle=document.getElementById('ioTitle'), ioAction=document.getElementById('ioAction'),
+        ioMsg=document.getElementById('ioMsg'); let ioMode='export';
+  function openIO(mode){ ioMode=mode; ioMsg.textContent='';
+    if(mode==='export'){ ioTitle.textContent='EXPORT — copy this and keep it safe'; ioText.value=JSON.stringify(settingsObj()); ioAction.textContent='Copy'; }
+    else { ioTitle.textContent='IMPORT — paste a preset, then Load'; ioText.value=''; ioAction.textContent='Load'; }
+    ioBox.style.display='flex'; if(mode==='export'){ ioText.focus(); ioText.select(); } }
+  const ex=document.getElementById('ioExport'); if(ex) ex.addEventListener('click',()=>openIO('export'));
+  const im=document.getElementById('ioImport'); if(im) im.addEventListener('click',()=>openIO('import'));
+  const ic=document.getElementById('ioClose'); if(ic) ic.addEventListener('click',()=>{ ioBox.style.display='none'; });
+  if(ioAction) ioAction.addEventListener('click',()=>{
+    if(ioMode==='export'){ ioText.select();
+      try{ navigator.clipboard.writeText(ioText.value).then(()=>{ioMsg.textContent='Copied to clipboard ✓';},()=>{ioMsg.textContent='Select the text above and copy manually';}); }
+      catch(e){ ioMsg.textContent='Select the text above and copy manually'; }
+    } else {
+      try{ const p=JSON.parse(ioText.value); applySettings(p); applyTestType(); saveTestPrefs(); syncTestUI();
+        ioMsg.textContent='Loaded ✓'; setTimeout(()=>{ ioBox.style.display='none'; },600); }
+      catch(e){ ioMsg.textContent='Invalid JSON — check it and try again'; }
+    }
+  });
+});
+
+// ---- move text popup ----
+const moveTxt=document.getElementById('moveTxt');
+let moveTimer=0;
+function showMove(t){ moveTxt.textContent=t; moveTxt.classList.add('show'); moveTimer=0.9; }
+
+// ---- update ----
+function update(dt){
+  if(state!=='play') return;
+  if(benchMode){   // only the selected weapon fires, and only while HOLD-TO-FIRE is pressed
+    laserL = laserR = (testFiring && testWeapon===0);
+    rocketBtnDown   = (testFiring && testWeapon===1);
+  }
+  const pX0=playerX;                 // lateral position at the start of this step (for collision sweep)
+  const seg=findSeg(pos);
+  // Left analog stick: X = steer, push forward = throttle, pull back = brake (you keep steering during both).
+  // Right pad = fire both lasers.
+  const kUp=(keys['ArrowUp']||keys['KeyW'])?1:0;
+  const kSteer = ((keys['ArrowRight']||keys['KeyD'])?1:0) - ((keys['ArrowLeft']||keys['KeyA'])?1:0);
+  // thumb on the stick (or hold up) = full throttle; lift off = coast down. No brake.
+  const throttle = (padL.down||kUp) ? 1 : 0;
+  flapL = flapR = 0;                                // no airbrakes
+  jetThrustL = jetThrustR = throttle;               // flames/engine track the throttle
+  const thrust = throttle;
+  const diff   = Math.max(-1, Math.min(1, padL.steer + kSteer));   // stick X steers
+  let wantBoost = keys['Space']||touchBoost||padBoost;
+
+  // ---- boost: hold the button to boost; it drains a meter that regenerates after a short delay ----
+  boosting = wantBoost && boostMeter>0.02;
+  if(boosting){
+    boostMeter=Math.max(0, boostMeter - boostDrain*dt); boostIdle=0;
+    boostRamp=Math.min(1, boostRamp + dt/1.4);            // builds toward full boost over ~1.4s
+  } else {
+    boostRamp=Math.max(0, boostRamp - dt/0.6);            // bleeds off when released
+    boostIdle+=dt;
+    if(boostIdle>=boostDelay) boostMeter=Math.min(1, boostMeter + boostRegen*dt);
+  }
+  if(boosting && !wasBoosting) boostSound();               // whoosh on the rising edge
+  wasBoosting=boosting;
+  boostEnv += ((boosting?1:0) - boostEnv) * Math.min(1, dt*6);
+  const boostFrac = boostPower * evalCurve(boostPts, boostRamp);   // extra speed (fraction of base) shaped by the ramp curve
+  const topSpeed  = maxSpeed*(1+boostPower);                       // absolute ceiling
+
+  // forward speed: gas climbs to base (600); boost adds on top, up to the boosted ceiling
+  const targetSpeed = boosting ? maxSpeed*(1+boostFrac) : throttle*maxSpeed;
+  if(speed < targetSpeed) speed = Math.min(targetSpeed, speed + accel*dt);
+  else                    speed = Math.max(targetSpeed, speed + decel*0.8*dt);
+  if(speed>topSpeed) speed = topSpeed;
+  if(speed<0) speed=0;
+  // flame level: tracks actual speed while on the gas (so it maxes at 600), but snaps toward 0
+  // quickly the instant you release the stick — no lingering plume while coasting. Boost forces it big.
+  const jetTarget = Math.max(throttle>0.02 ? Math.min(1,speed/maxSpeed) : 0, boostEnv);
+  jetVis += (jetTarget - jetVis) * Math.min(1, dt*13);
+  jetThrustL = jetThrustR = jetVis;
+
+  // POSITION steering: the stick's left/right position maps straight to the craft's lateral
+  // position — centre = centreline, full over = the wall. Snaps there in ~real time (tiny de-jitter
+  // smoothing only). No rate integration, no half-pipe drift, so it goes exactly where your thumb is.
+  const STEER_REACH = 1.77;                          // thumb full-over -> just shy of the 1.8 rail (all views)
+  const targetX = benchMode ? playerX : Math.max(-1, Math.min(1, diff)) * STEER_REACH;
+  const moveDir = targetX - playerX;                // direction it's travelling -> used for the lean
+  // Responsive when steering out; gentler when the thumb's released so it eases back to centre instead of snapping.
+  const returning = Math.abs(targetX) < 0.02 && Math.abs(playerX) > 0.001;
+  const rate = returning ? dt*4.5 : dt*26;
+  if(!benchMode){ playerX += moveDir * Math.min(1, rate); }
+  playerX = Math.max(-1.77, Math.min(1.77, playerX));
+  steerVisual += (Math.max(-1,Math.min(1,moveDir*3)) - steerVisual) * Math.min(1, dt*12);
+
+  // advance
+  const prevPos=pos;
+  pos += speed*dt;
+  if(benchMode) pos=prevPos;          // craft stays parked; only the projectiles travel
+  // The craft sprite sits ~0.84 down the screen, which is a fixed distance AHEAD of the
+  // camera position. Smash an obstacle when it reaches THAT spot (not the camera), so the
+  // hit lands exactly when it passes under the craft.
+  const carCz = camDepth*camHeight*(W*0.5)/(0.34*H);
+  if(obstaclesOn) for(const o of obstacles){
+    if(o.broken) continue;
+    const zVis=o.z-segLen*0.5;                 // pillars are drawn at their segment's near edge
+    let hz=((zVis-carCz)%trackLen+trackLen)%trackLen;
+    while(hz<prevPos) hz+=trackLen;
+    if(hz<=pos){
+      // interpolate the craft's lateral position to the exact moment it reaches the pillar,
+      // so fast lateral moves can't slip through between frames
+      const f=(pos>prevPos)?Math.max(0,Math.min(1,(hz-prevPos)/(pos-prevPos))):1;
+      const pxAt=pX0+(playerX-pX0)*f;
+      if(Math.abs(pxAt-o.u)<0.15){
+        o.broken=true; o.breakT=0.55; speed*=0.58;   // smash bleeds your speed
+        hitFlashT=0.3; crunchSound();
+      }
+    }
+  }
+  while(pos>=trackLen){ pos-=trackLen; lap++;
+    const lt=(now-lapStart)/1000; if(!bestLap||lt<bestLap)bestLap=lt; lapStart=now;
+    for(const o of obstacles){ o.broken=false; o.breakT=0; o.hp=o.maxHp; }   // re-arm each lap
+    if(!unlimitedLaps) showMove('LAP '+lap);
+    if(!unlimitedLaps && lap>totalLaps){ finishRace(); return; }
+  }
+
+  // ---- vertical airtime ----
+  // Sample the ground at the craft's VISUAL position (it's drawn ~carCz ahead of the camera), so the
+  // jump matches what you see. The craft rides the surface; when the road falls away faster than gravity
+  // (a crest into a dip) it lifts off and arcs. Launch speed is capped so it never rockets straight up.
+  {
+    const gy=groundAt(pos+carCz);
+    if(prevGroundY==null) prevGroundY=gy;
+    const groundVel=(gy-prevGroundY)/Math.max(1e-4,dt);
+    prevGroundY=gy;
+    if(jumpReq){ jumpReq=false; if(!airborne && !benchMode){ vy=Math.sqrt(2*GRAV*JUMP_GRAV*jumpHeight); airborne=true; jumpArc=true; jumpSound(); } }   // jump button kick (only off the ground)
+    vy -= GRAV*(jumpArc?JUMP_GRAV:1)*dt;
+    let ny=craftY + vy*dt;
+    if(ny <= gy + (airborne?0:AIR_MIN)){      // grounded (needs to clear AIR_MIN to lift off; lands as soon as it touches)
+      craftY=gy; vy=Math.min(groundVel, LAUNCH_CAP);
+      if(airborne){ landT=0.16; airborne=false; jumpArc=false; }
+    } else { craftY=ny; airborne=true; }
+    airH=Math.max(0, Math.min(5000, craftY-gy));
+    if(landT>0) landT-=dt;
+  }
+  // fell into a gap? (over a hole at your lane and not high enough off the deck to clear it)
+  if(gapCd>0) gapCd-=dt;
+  if(!benchMode && gapCd<=0 && airH<90){
+    const gp=findSeg(pos+carCz).gap|0;
+    const overHole = gp===1 || (gp===2 && playerX<0.15) || (gp===3 && playerX>-0.15);
+    if(gp && overHole){ speed*=0.4; hitFlashT=0.35; crunchSound(); gapCd=0.7; }
+  }
+  // camera vertical: chase views ease toward the ground ahead (smooth framing). Cockpit tracks the
+  // craft's exact height with NO lag, so it rises and falls with every hill contour (and jumps) instead
+  // of cutting a smoothed straight line through bumps.
+  if(cockpit) camYsmooth = craftY;
+  else camYsmooth += (groundAt(pos+carCz) - camYsmooth) * Math.min(1, dt*3.5);
+
+  // rivals (they no longer smash targets — that was clearing whole stretches ahead of you)
+  for(const c of cars){
+    if(c.hitT>0) c.hitT-=dt;
+    if(c.deadT>0){ c.deadT-=dt; if(c.deadT<=0){ c.pos=(pos + segLen*(40+Math.random()*40))%trackLen; c.x=Math.random()*1.4-0.7; c.hp=c.maxHp; } continue; }
+    const cp0=c.pos;
+    const eff = c.spd * ((c.slowT>0)?0.5:1);
+    if(c.slowT>0) c.slowT-=dt;
+    const raw = cp0 + eff*dt;
+    c.pos=raw%trackLen;
+    // gentle lane drift
+    c.x += Math.sin(c.pos*0.0006+c.hue)*dt*0.3;
+    c.x=Math.max(-0.9,Math.min(0.9,c.x));
+  }
+
+  if(moveTimer>0){ moveTimer-=dt; if(moveTimer<=0) moveTxt.classList.remove('show'); }
+  for(const o of obstacles){
+    if(o.breakT>0){ o.breakT-=dt; if(o.breakT<=0 && o.broken) o.respawnT=7; }
+    else if(o.broken){ o.respawnT-=dt; if(o.respawnT<=0){ o.broken=false; o.hp=o.maxHp; } }
+  }
+  if(hitFlashT>0) hitFlashT-=dt;
+  // coins fly in an arc from the shot target up into the counter; land -> count up
+  if(coinFx.length){
+    for(const c of coinFx) c.t+=dt;
+    coinFx=coinFx.filter(c=>c.t<c.dur);
+  }
+  if(coinPop>0) coinPop=Math.max(0,coinPop-dt*4);
+  // keep the laser stream anchored to the craft: shift every in-flight bolt by how far the craft moved
+  // sideways this frame. Without this, older bolts hold the lane they were fired at and visibly trail
+  // behind you when strafing (worst in the far view, where the whole stream is on screen at once).
+  { const dxL=playerX-prevLaneX;
+    if(dxL){ for(const b of bolts){ b.lane+=dxL; b.fireLane+=dxL; if(b.craftX!=null) b.craftX+=dxL; } }
+    prevLaneX=playerX; }
+  // lasers: hold to fire a stream of forward pulses; each travels out and pops the obstacle it reaches
+  lcdL-=dt;
+  if((laserL||laserR) && lcdL<=0){
+    const mk=(off,bi)=>bolts.push({side:Math.sign(off), lane:playerX+off, fireLane:playerX+off, craftX:playerX, prog:0, target:null, barrel:bi});
+    const kIn=1 - 0.22*Math.min(1, Math.abs(playerX)/1.77);   // converge the beams a little out on the banks
+    const lanes=laserLanes(effCount());
+    for(let i=0;i<lanes.length;i++) mk(lanes[i]*kIn, i);
+    lcdL=effFireGap(); laserSound();
+  }
+  const lRange=effRange()*segLen, ACQ_U=0.35*autoAim;     // ACQ_U = how far off-lane the auto-aim will reach
+  // you can only hit what's actually drawn this frame (stops shots reaching past the visible horizon)
+  for(const o of obstacles){ const s=findSeg(o.z), sc=s&&s.p1&&s.p1.screen;
+    o._vis = !!(s && s._f===frame && sc && sc.scale*roadW*W*0.06 >= 1); }
+  const _killed=new Set(), _tinked=new Set();   // resolve sounds once per target this frame
+  for(const b of bolts){
+    const prevD=b.prog*lRange;
+    b.prog+=dt/0.26;                 // ~0.26s to cross full range (faster bolts)
+    const d=b.prog*lRange;
+    b.prevD=prevD;                   // remember where it was so the drawn streak spans the whole frame's travel (no strobing gap)
+    if(laserStyle===1){
+      // STRAIGHT: no homing. The beam runs from your lane toward the centreline aimSeg ahead, so it only
+      // hits a target if your angle happens to line up — exactly the "real laser" tradeoff.
+      b.target=null;
+      if(obstaclesOn){
+        const aimD=Math.max(1,aimSeg)*segLen, cX=(b.craftX!=null?b.craftX:b.fireLane);
+        for(const o of obstacles){
+          if(o.broken || !o._vis) continue;
+          let oz=o.z-pos; if(oz<0)oz+=trackLen;
+          if(oz<=prevD || oz>d) continue;
+          const beamLane=b.fireLane;     // straight ahead, down-track at the craft's lane (no pull toward centre)
+          if(Math.abs(o.u-beamLane)>0.10) continue;
+          o.hp-=effDmg(); b.prog=2;
+          if(o.hp<=0 && !o.broken){ o.broken=true; o.breakT=0.55; if(!benchMode) spawnCoins(o); _killed.add(o); _tinked.delete(o); }
+          else if(!o.broken){ _tinked.add(o); }
+          break;
+        }
+      }
+      for(const c of cars){     // rivals
+        if(c.deadT>0||c.hp<=0) continue;
+        let cz=c.pos-pos; if(cz<0)cz+=trackLen;
+        if(cz<=prevD || cz>d) continue;
+        if(Math.abs(c.x-b.fireLane)>0.13) continue;
+        damageCar(c); b.prog=2; break;
+      }
+      continue;
+    }
+    // acquire / keep a homing target: nearest unbroken obstacle OR rival still ahead, within the assist window
+    if(b.target){ const dead = b.target.spd!==undefined ? (b.target.hp<=0||b.target.deadT>0) : b.target.broken; if(dead) b.target=null; }
+    if(!b.target && ACQ_U>0){
+      let best=null, bestD=Infinity;
+      if(obstaclesOn) for(const o of obstacles){
+        if(o.broken || !o._vis) continue;
+        let oz=o.z-pos; if(oz<0)oz+=trackLen;
+        if(oz<=d || oz>lRange) continue;
+        if(Math.abs(o.u-b.fireLane)>ACQ_U) continue;
+        if(oz<bestD){ bestD=oz; best=o; }
+      }
+      for(const c of cars){
+        if(c.deadT>0||c.hp<=0) continue;
+        let cz=c.pos-pos; if(cz<0)cz+=trackLen;
+        if(cz<=d || cz>lRange) continue;
+        if(Math.abs(c.x-b.fireLane)>ACQ_U) continue;
+        if(cz<bestD){ bestD=cz; best=c; }
+      }
+      b.target=best;
+    }
+    // curve the bolt toward its target so it arrives on-lane right as it reaches it
+    if(b.target){
+      const isCar=b.target.spd!==undefined;
+      let tz=(isCar?b.target.pos:b.target.z)-pos; if(tz<0)tz+=trackLen;
+      const tu=isCar?b.target.x:b.target.u;
+      const frac = tz>1 ? Math.min(1,d/tz) : 1;
+      b.lane = b.fireLane + (tu-b.fireLane)*frac;
+    }
+    // rival hit (any view, regardless of the crystal toggle)
+    for(const c of cars){
+      if(c.deadT>0||c.hp<=0) continue;
+      if(Math.abs(c.x-b.lane)>0.13) continue;
+      let cz=c.pos-pos; if(cz<0)cz+=trackLen;
+      if(cz>prevD && cz<=d){ damageCar(c); b.prog=2; break; }
+    }
+    if(b.prog>1) continue;
+    if(obstaclesOn){
+      for(const o of obstacles){
+        if(o.broken || !o._vis) continue;
+        if(Math.abs(o.u-b.lane)>0.10) continue;   // hit window (homing brings the bolt onto the lane)
+        let oz=o.z-pos; if(oz<0)oz+=trackLen;
+        if(oz>prevD && oz<=d){
+          o.hp-=effDmg(); b.prog=2;                     // damage per bolt (base + upgrades)
+          if(o.hp<=0 && !o.broken){ o.broken=true; o.breakT=0.55; if(!benchMode) spawnCoins(o); _killed.add(o); _tinked.delete(o); }
+          else if(!o.broken){ _tinked.add(o); }
+          break;
+        }
+      }
+    }
+  }
+  // one sound per target: destroyed -> break only (no tink); damaged -> single tink
+  _killed.forEach(()=>shatterSound());
+  _tinked.forEach(()=>hitSound());
+  bolts=bolts.filter(b=>b.prog<1.0001);
+  updateRockets(dt);
+  updateAudio(benchMode?0.7:thrust, benchMode?maxSpeed*0.55:speed);   // bench keeps a steady whine so jet sounds can be tuned
+  updateHUD();
+}
+// ---- rockets: unlimited full-auto, brisk linear launch, explode with a blast radius (+optional homing) ----
+function updateRockets(dt){
+  rcd-=dt;
+  if(rocketBtnDown && rcd<=0){
+    const N=Math.max(1,Math.min(3,rocketCount));
+    for(let i=0;i<N;i++){ const lane=playerX + (i-(N-1)/2)*0.12; rockets.push({lane, fireLane:lane, prog:0, target:null}); }
+    rcd=Math.max(0.05,rocketGap); rocketLaunchSound();
+  }
+  const RR=rocketRange*segLen;
+  const nose=camDepth*camHeight*(W*0.5)/(0.34*H) + segLen*2.2;   // don't explode until it's visibly past the craft
+  for(const r of rockets){
+    const prevD=r.prog*RR;
+    r.prog += dt*rocketVel*Math.max(0.05,curveMul(r.prog))/rocketRange;   // velocity ramps along the tuned curve
+    const d=r.prog*RR;
+    if(upg.homing){
+      if(r.target && r.target.broken) r.target=null;
+      if(obstaclesOn && !r.target){ let best=null,bd=Infinity;
+        for(const o of obstacles){ if(o.broken||!o._vis)continue; let oz=o.z-pos; if(oz<0)oz+=trackLen;
+          if(oz<=d||oz>RR)continue; if(Math.abs(o.u-r.fireLane)>0.9)continue; if(oz<bd){bd=oz;best=o;} } r.target=best; }
+      if(r.target){ let tz=r.target.z-pos; if(tz<0)tz+=trackLen; const fr=tz>1?Math.min(1,d/tz):1;
+        r.lane=r.fireLane+(r.target.u-r.fireLane)*fr; }
+    }
+    let hit=null;
+    if(obstaclesOn && d>nose) for(const o of obstacles){ if(o.broken||!o._vis) continue;
+      let oz=o.z-pos; if(oz<0)oz+=trackLen;
+      if(oz>Math.max(prevD,nose) && oz<=d && Math.abs(o.u-r.lane)<0.22){ hit=o; break; } }
+    if(hit || r.prog>=1){ explodeRocket(r, hit, d); r.done=true; }
+  }
+  rockets=rockets.filter(r=>!r.done);
+  for(const b of booms) b.t+=dt;
+  booms=booms.filter(b=>b.t<b.dur);
+}
+function explodeRocket(r, hit, d){
+  let iz; if(hit){ let oz=hit.z-pos; if(oz<0)oz+=trackLen; iz=pos+oz; } else iz=pos+d;
+  const iu = hit? hit.u : r.lane, bz=rocketBlastZ(), bu=rocketBlastU(), dmg=rocketDmg();
+  let killed=false;
+  if(obstaclesOn) for(const o of obstacles){ if(o.broken || !o._vis) continue;
+    let dz=((o.z-iz)%trackLen+trackLen)%trackLen; if(dz>trackLen/2) dz-=trackLen;
+    if(Math.abs(dz)<=bz && Math.abs(o.u-iu)<=bu){ o.hp-=dmg;
+      if(o.hp<=0){ o.broken=true; o.breakT=0.55; if(!benchMode) spawnCoins(o); killed=true; } } }
+  for(const c of cars){ if(c.deadT>0||c.hp<=0) continue;
+    let dz=((c.pos-iz)%trackLen+trackLen)%trackLen; if(dz>trackLen/2) dz-=trackLen;
+    if(Math.abs(dz)<=bz && Math.abs(c.x-iu)<=bu){ damageCar(c, dmg); } }
+  booms.push({z:iz, u:iu, t:0, dur:0.5, r:bu});
+  explosionSound(); if(killed) shatterSound();
+}
+
+function damageCar(c, amt){
+  if(c.deadT>0 || c.hp<=0) return;
+  c.hp -= (amt||effDmg()); c.hitT=0.2;
+  if(c.hp<=0){
+    c.hp=0; c.deadT=2.4;                                  // explode, then respawn ahead after a beat
+    booms.push({z:c.pos, u:c.x, t:0, dur:0.5, r:0.6}); explosionSound();
+    if(!benchMode){ coinCount+=25; coinPop=Math.min(1,coinPop+0.5); coinSound(); saveUpg();
+      coinFx.push({z:c.pos,u:c.x,n:25,t:0,dur:0.7,parts:[{ang:-Math.PI/2,sp:1,rise:0.8}]}); }
+  } else { hitSound(); }
+}
+function finishRace(){
+  state='finish';
+  const place=computePosition();
+  document.getElementById('finish').style.display='flex';
+  document.getElementById('finishTitle').textContent = place===1?'WINNER!':'RACE COMPLETE';
+  document.getElementById('finishPos').textContent = 'FINISHED '+ordinal(place)+' / '+totalCars;
+  document.getElementById('finishTime').textContent = 'BEST LAP  '+fmtTime(bestLap*1000);
+}
+function ordinal(n){ const s=['TH','ST','ND','RD'], v=n%100; return n+(s[(v-20)%10]||s[v]||s[0]); }
+
+function computePosition(){
+  // overall progress = lap*trackLen + pos
+  const myProg=(lap-1)*trackLen+pos;
+  let ahead=0;
+  for(const c of cars){
+    // rivals progress roughly: laps approximate via total distance
+    const cProg=c.pos + Math.floor(myProg/trackLen)*0; // simple same-lap compare
+    if(c.pos>pos) {} // not exact; use distance heuristic
+  }
+  // simpler: count rivals whose position-along-track is ahead within a window
+  let place=1;
+  for(const c of cars){
+    let diff=c.pos-pos;
+    if(diff<-trackLen/2) diff+=trackLen;
+    if(diff>trackLen/2) diff-=trackLen;
+    if(diff>0) place++;
+  }
+  return place;
+}
+
+// ---- HUD ----
+const E=id=>document.getElementById(id);
+function fmtTime(ms){
+  const m=Math.floor(ms/60000), s=Math.floor(ms%60000/1000), t=Math.floor(ms%1000/100);
+  return String(m)+"'"+String(s).padStart(2,'0')+'"'+String(t);   // tenths -> steady, not millisecond-twitchy
+}
+function updateHUD(){
+  E('kphVal').textContent=Math.round(speed/maxSpeed*600);
+  const cv=E('coinVal'); if(cv){ cv.textContent=coinCount; cv.style.transform='scale('+(1+coinPop*0.3)+')'; }
+  E('timeVal').textContent=fmtTime(now-lapStart);
+  E('lapVal').textContent=unlimitedLaps ? String(lap) : (Math.min(lap,totalLaps)+'/'+totalLaps);
+  E('posVal').textContent=computePosition();
+  const ef=E('energyFill'); if(ef){ ef.style.width=(boostMeter*100)+'%';
+    ef.style.background = boosting ? 'linear-gradient(90deg,#9dff3a,#0ff)'
+      : (boostIdle<boostDelay ? 'linear-gradient(90deg,#a55,#c77)' : 'linear-gradient(90deg,#0ff,#0f8)'); }
+  const ra=E('rktAmmo'), rb=E('rocketBtn'), ring=E('rktRing');
+  if(ra){ ra.textContent='∞'; }
+  if(rb){ rb.classList.remove('empty'); }
+  if(ring){ ring.style.display='none'; }
+}
+
+// ---- render ----
+function project(p, camX, camY, camZ){
+  p.camera={x:(p.world.x||0)-camX, y:(p.world.y||0)-camY, z:(p.world.z||0)-camZ};
+  p.screen={};
+  const sc=camDepth/Math.max(p.camera.z,0.01);
+  p.screen.scale=sc;
+  p.screen.x=Math.round(W/2 + sc*p.camera.x*W/2);
+  p.screen.y=Math.round(H/2 - sc*p.camera.y*H/2);
+  p.screen.w=Math.round(sc*roadW*W/2);
+}
+let frame=0;
+function rect(x,y,w,h,c){ ctx.fillStyle=c; ctx.fillRect(x,y,w,h); }
+function poly(x1,y1,x2,y2,x3,y3,x4,y4,c){
+  ctx.fillStyle=c; ctx.beginPath();
+  ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.lineTo(x3,y3); ctx.lineTo(x4,y4); ctx.closePath(); ctx.fill();
+}
+
+function render(){
+  if(state==='editor') return;   // DOM overlay handles the editor
+  // cockpit: roll the whole view with the bank so the horizon tilts as you ride up the valley walls
+  // (the fixed dashboard/frame are drawn afterwards, un-rolled, and hide the rotated corners).
+  let ckRoll=0;
+  if(cockpit){ const ROLLMATCH=1.0, PIVOTMIX=0.5, ZOOM=0.45;
+    // You can't pin BOTH the horizon and the guns under one roll: pivot on the horizon (PIVOTMIX 0) and the
+    // guns/bolts swing sideways as you bank; pivot on the guns (PIVOTMIX 1) and the horizon swings instead.
+    // 0.5 splits it so neither moves much. ZOOM is the bank punch-in — it also multiplies the swing, so modest.
+    ckRoll=Math.max(-1.3, Math.min(1.3, bankAngleAt(playerX)*ROLLMATCH));
+    const s=1+Math.abs(ckRoll)*ZOOM;
+    const camHE=camHeight+CRAFT_LIFT;   // eye height the cockpit actually rides at (matches camYbase)
+    const _czR=camDepth*camHE*(W*0.5)/(0.34*H), _scN=camDepth/(_czR+segLen*2.2);
+    const gunY=H/2 - _scN*(laserLift()-camHE)*(W*0.5);   // where the gun/bolt muzzle lands on screen
+    const pivY=H/2 + (gunY-H/2)*PIVOTMIX;
+    ctx.save(); ctx.translate(W/2,pivY); ctx.scale(s,s); ctx.rotate(ckRoll); ctx.translate(-W/2,-pivY); }
+    // The world (road + the real curved bolts/rockets) rolls together so the bolts stay glued to the track
+    // contour. The overhead barrels are a fixed cockpit layer drawn in drawCockpitGuns().
+  // sky
+  const g=ctx.createLinearGradient(0,0,0,H*0.62);
+  g.addColorStop(0,'#160a36'); g.addColorStop(.6,'#260d3c'); g.addColorStop(1,'#341240');
+  ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+  // (sun glow removed — it bled through the valley gap and read as a translucent patch)
+  // distant city skyline on the horizon
+  ctx.fillStyle='#0c0820';
+  for(let i=0;i<40;i++){ const bx=(i*37)%W; const bh=10+((i*53)%50); ctx.fillRect(bx,H*0.55-bh,14,bh); }
+  // void floor beneath the floating track
+  const vg=ctx.createLinearGradient(0,H*0.5,0,H);
+  vg.addColorStop(0,'#120a26'); vg.addColorStop(1,'#06030f');
+  ctx.fillStyle=vg; ctx.fillRect(0,H*0.5,W,H*0.5);
+
+  const baseSeg=findSeg(pos);
+  const basePercent=(pos%segLen)/segLen;
+  const playerY=baseSeg.p1.world.y;
+  const camFollow = cockpit ? 1.0 : CAM_FOLLOW;   // cockpit centres fully on your lane; chase keeps the craft offset
+  const camOffX=playerX*roadW*camFollow;
+  const camYbase=camYsmooth+camHeight+(cockpit?CRAFT_LIFT:0)+bankLift(baseSeg,playerX)*camFollow;   // cockpit eye rises with the craft's lift, so high craft height feels elevated (guns keep a fixed offset below the eye)
+  const NEAR=camDepth*0.4;   // draw strips this close before culling, so the foreground stays filled
+  frame++;
+
+  // Start a few segments BEHIND the player so a strip keeps drawing for a few more
+  // frames after its near edge slides off the bottom — on a bank its edges are still
+  // wrapping up onto the screen, so cutting it the instant you pass it looks premature.
+  const BACK=10;
+  let x=0, dx=-(baseSeg.curve*basePercent);
+  for(let b=1;b<=BACK;b++){                       // rewind the curve accumulation to n=-BACK
+    const bi=((baseSeg.index-b)%segs.length+segs.length)%segs.length;
+    dx-=segs[bi].curve; x-=dx;
+  }
+  // PASS 1: project every visible strip (also sets seg.p1.screen for rivals/obstacles).
+  const strips=[];
+  const bh=bankH(playerX);
+  for(let n=-BACK;n<drawDist;n++){
+    const gi=baseSeg.index+n;
+    const idx=((gi%segs.length)+segs.length)%segs.length;
+    const seg=segs[idx];
+    const cameraZ=pos - (gi>=segs.length?trackLen:0) + (gi<0?trackLen:0);
+    const czN0=seg.p1.world.z-cameraZ, czF0=seg.p2.world.z-cameraZ;
+    if(czF0<=NEAR){ x+=dx; dx+=seg.curve; continue; }       // whole segment behind the near plane
+    const czN=Math.max(czN0,NEAR);
+    const scN=camDepth/czN, scF=camDepth/Math.max(czF0,NEAR);
+    const camX0N=x-camOffX, camX0F=(x+dx)-camOffX;
+    const segYN=seg.p1.world.y, segYF=seg.p2.world.y;
+    const cy0N=H/2 - scN*(segYN-camYbase)*W/2;
+    seg._f=frame;
+    seg.p1.screen={x:W/2 + scN*camX0N*W/2, y:cy0N, scale:scN, w:scN*roadW*W/2};
+    x+=dx; dx+=seg.curve;
+    // only the immediate foreground needs the inverted-quad guard; mid/far strips always
+    // draw (the far->near painting covers anything hidden), so nothing flickers on curves
+    const cyNp=H/2 - scN*(segYN+bh-camYbase)*W/2;
+    const cyFp=H/2 - scF*(segYF+bh-camYbase)*W/2;
+    if(scN>0.01 && cyFp>=cyNp) continue;
+    strips.push({idx,n,scN,scF,camX0N,camX0F,segYN,segYF});
+  }
+  // PASS 2: paint FAR -> NEAR, so nearer strips simply cover farther ones. No per-strip
+  // occlusion culling, so nothing flickers in and out on curves / crests. Obstacles are
+  // drawn right after their own strip, so any nearer track painted afterward hides them.
+  // ---- projectiles are drawn INSIDE pass 2, bucketed by their NEAREST segment, so a hill
+  //      crest between you and the bolt (painted afterward, being nearer) correctly hides it.
+  const carCzR=camDepth*camHeight*(W*0.5)/(0.34*H);
+  const noseDepth=carCzR + segLen*2.2;
+  const lRange=effRange()*segLen, ff=Math.max(0.02,fadeFrac), RR=rocketRange*segLen;
+  const drawBolt=(b)=>{
+    const p=Math.min(1,b.prog), d=p*lRange;
+    const a = p<(1-ff)?1:Math.max(0,(1-p)/ff);
+    let pts=[], wpx;
+    if(laserStyle===1){
+      // STRAIGHT: a rigid beam straight ahead at the craft's lane (two points only).
+      const aimD=Math.max(1,aimSeg)*segLen;
+      const sG=findSeg(pos+noseDepth), sA=findSeg(pos+aimD);
+      if(sG._f!==frame||!sG.p1.screen||sA._f!==frame||!sA.p1.screen) return;
+      const gx=sG.p1.screen.x+b.fireLane*sG.p1.screen.w, gy=sG.p1.screen.y - sG.p1.screen.scale*(bankLift(sG,b.fireLane)+laserLift()+airH)*(W/2);
+      const ax=sA.p1.screen.x+b.fireLane*sA.p1.screen.w, ay=sA.p1.screen.y - sA.p1.screen.scale*(bankLift(sA,b.fireLane)+laserLift()+airH)*(W/2);
+      const dx=ax-gx, dy=ay-gy, hp=d/aimD, pp=Math.max(0,(b.prevD!=null?b.prevD:d) - 1.0*segLen*boltLenMul)/aimD;
+      pts=[[gx+dx*pp,gy+dy*pp],[gx+dx*hp,gy+dy*hp]];
+      wpx=Math.max(1.6, sA.p1.screen.w*0.024)*boltWidthMul;
+    } else {
+      // HOMING: sample the track contour at the bolt's lane along its visible length, lifted to laser
+      // height, and draw it as one smooth curve — so the beam rides the bend instead of cutting a chord.
+      const sFar=findSeg(pos+d); if(sFar._f!==frame||!sFar.p1.screen) return;
+      wpx=Math.max(1.6, sFar.p1.screen.w*0.024)*boltWidthMul;
+      const dn=Math.max(noseDepth, Math.min((b.prevD!=null?b.prevD:d), d - segLen*4*boltLenMul));
+      const span=Math.max(1, d-dn), STEPS=Math.max(2, Math.min(24, Math.round(span/segLen)+1));
+      for(let i=0;i<=STEPS;i++){ const zz=dn+span*(i/STEPS), s=findSeg(pos+zz);
+        if(s._f!==frame||!s.p1.screen) continue; const sc=s.p1.screen;
+        pts.push([sc.x+b.lane*sc.w, sc.y - sc.scale*(bankLift(s,b.lane)+laserLift()+airH)*(W/2)]); }
+      if(pts.length<2) return;
+    }
+    ctx.save(); ctx.lineCap='round'; ctx.lineJoin='round'; ctx.globalAlpha=a;
+    const path=()=>{ ctx.beginPath(); ctx.moveTo(pts[0][0],pts[0][1]); for(let i=1;i<pts.length;i++) ctx.lineTo(pts[i][0],pts[i][1]); };
+    ctx.shadowColor='#ff3b6b'; ctx.shadowBlur=12; ctx.strokeStyle='#ff3b6b'; ctx.lineWidth=wpx; path(); ctx.stroke();
+    ctx.shadowBlur=0; ctx.strokeStyle='#ffd6e0'; ctx.lineWidth=Math.max(0.8,wpx*0.4); path(); ctx.stroke();   // bright core
+    ctx.restore();
+  };
+  const drawRocket=(r)=>{
+    const d=r.prog*RR;
+    const s=findSeg(pos+d); if(s._f!==frame||!s.p1.screen) return;
+    const sc=s.p1.screen, gy=sc.y - sc.scale*bankLift(s,r.lane)*(W/2), x=sc.x+r.lane*sc.w, y=gy - sc.scale*laserLift()*(W/2);
+    const dn=Math.max(noseDepth, d-3*segLen), sN=findSeg(pos+dn);
+    let tx=x, ty=y+6; if(sN._f===frame&&sN.p1.screen){ const gN=sN.p1.screen.y - sN.p1.screen.scale*bankLift(sN,r.lane)*(W/2); tx=sN.p1.screen.x+r.lane*sN.p1.screen.w; ty=gN - sN.p1.screen.scale*laserLift()*(W/2); }
+    const wp=Math.max(2,sc.w*0.05);
+    ctx.save(); ctx.lineCap='round';
+    // shadow on the track surface beneath the rocket
+    const shr=Math.max(1.5,wp*0.7);
+    ctx.fillStyle='rgba(0,0,0,0.32)';
+    ctx.beginPath(); ctx.ellipse(x,gy,shr,shr*0.4,0,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='rgba(255,180,60,.8)'; ctx.lineWidth=wp*0.7; ctx.shadowColor='#ffae00'; ctx.shadowBlur=10;
+    ctx.beginPath(); ctx.moveTo(tx,ty); ctx.lineTo(x,y); ctx.stroke();
+    ctx.shadowColor='#fff'; ctx.shadowBlur=8; ctx.fillStyle='#ffe8a0';
+    ctx.beginPath(); ctx.arc(x,y,Math.max(2,wp*0.6),0,Math.PI*2); ctx.fill();
+    ctx.restore();
+  };
+  const drawBoom=(b)=>{
+    const s=findSeg(b.z); if(!s||s._f!==frame||!s.p1.screen) return;
+    const sc=s.p1.screen, x=sc.x+b.u*sc.w, y=sc.y - sc.scale*(bankLift(s,b.u)+laserLift())*(W/2);
+    const pr=b.t/b.dur, R=sc.w*b.r*(0.4+1.3*pr), a=Math.max(0,1-pr);
+    ctx.save();
+    const g=ctx.createRadialGradient(x,y,0,x,y,Math.max(2,R));
+    g.addColorStop(0,'rgba(255,240,180,'+(0.7*a).toFixed(3)+')'); g.addColorStop(0.5,'rgba(255,140,40,'+(0.5*a).toFixed(3)+')'); g.addColorStop(1,'rgba(255,80,30,0)');
+    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(x,y,Math.max(2,R),0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='rgba(255,200,90,'+(0.8*a).toFixed(3)+')'; ctx.lineWidth=Math.max(1,3*(1-pr)); ctx.beginPath(); ctx.arc(x,y,Math.max(2,R*0.9),0,Math.PI*2); ctx.stroke();
+    ctx.restore();
+  };
+  const fxBySeg={};
+  const fxPush=(idx,fn)=>{ (fxBySeg[idx]=fxBySeg[idx]||[]).push(fn); };
+  for(const b of bolts){ if(b.prog>1) continue; const p=Math.min(1,b.prog), d=p*lRange; if(d<noseDepth) continue;
+    const dn=Math.max(noseDepth, Math.min((b.prevD!=null?b.prevD:d), d - segLen*4*boltLenMul)); fxPush(findSeg(pos+dn).index, ()=>drawBolt(b)); }
+  for(const r of rockets){ const d=r.prog*RR; if(d<noseDepth) continue;
+    const dn=Math.max(noseDepth, d-3*segLen); fxPush(findSeg(pos+dn).index, ()=>drawRocket(r)); }
+  for(const b of booms){ fxPush(findSeg(b.z).index, ()=>drawBoom(b)); }
+  for(const c of cars){ c._seg=findSeg(c.pos).index; }   // which strip each rival sits on
+  for(let i=strips.length-1;i>=0;i--){ const s=strips[i];
+    drawBandedSeg(s.idx,s.n, s.scN,s.scF, s.camX0N,s.camX0F, s.segYN,s.segYF, camYbase, segs[s.idx].gap|0);
+    const sc=segs[s.idx].p1.screen;
+    if(obstaclesOn){
+      const list=obsBySeg[s.idx];
+      if(list){
+        for(const o of list){
+          if(o.broken && o.breakT<=0) continue;
+          const sz=sc.scale*roadW*W/2*0.12;
+          if(sz<1.0) continue;
+          const du=0.14, oseg=segs[s.idx];
+          const xL=sc.x+(o.u-du)*sc.w, yL=sc.y - sc.scale*bankLift(oseg,o.u-du)*W/2;
+          const xR=sc.x+(o.u+du)*sc.w, yR=sc.y - sc.scale*bankLift(oseg,o.u+du)*W/2;
+          const groundAng=Math.atan2(yR-yL, xR-xL);
+          drawObstacle(sc.x+o.u*sc.w, sc.y - sc.scale*bankLift(oseg,o.u)*W/2, sz, o, groundAng);
+        }
+      }
+    }
+    // rivals on this strip (drawn here so nearer track occludes them too)
+    for(const c of cars){
+      if(c._seg!==s.idx) continue;
+      if(c.deadT>0) continue;           // destroyed — hidden until it respawns
+      let d=c.pos-pos; if(d<0)d+=trackLen;
+      if(d<=segLen*1.2) continue;     // too close: would draw over the player
+      const w=sc.scale*roadW*W/2*0.30;
+      if(w<2) continue;
+      const sx=sc.x + c.x*sc.w;
+      const surfY=sc.y - sc.scale*bankLift(segs[s.idx],c.x)*W/2;   // track surface under the rival
+      const sz=Math.max(5,Math.min(90,w*0.6));
+      const hover=sz*0.55;                                          // anti-grav float height (px)
+      // contact shadow on the surface, so the float is obvious
+      ctx.save(); ctx.translate(sx, Math.min(H-4, surfY)); ctx.scale(1,0.34);
+      const rg=ctx.createRadialGradient(0,0,1,0,0,sz*0.95);
+      rg.addColorStop(0,'rgba(0,0,0,0.45)'); rg.addColorStop(0.7,'rgba(0,0,0,0.22)'); rg.addColorStop(1,'rgba(0,0,0,0)');
+      ctx.fillStyle=rg; ctx.beginPath(); ctx.arc(0,0,sz*0.95,0,Math.PI*2); ctx.fill(); ctx.restore();
+      const yaw=Math.sin(segs[s.idx].curve*0.5);
+      const cy=surfY - hover;
+      draw3DCar(sx, cy, sz, c.hue, false, yaw, bankAngleAt(c.x)*0.9, 0.6, 0.6);
+      // hit flash — a red pop when a shot lands
+      if(c.hitT>0){ ctx.save(); ctx.globalAlpha=Math.min(1,c.hitT/0.2)*0.75; ctx.globalCompositeOperation='lighter';
+        ctx.fillStyle='#ff3b54'; ctx.beginPath(); ctx.arc(sx,cy,sz*1.15,0,Math.PI*2); ctx.fill(); ctx.restore(); }
+      // health bar above the rival once it's taken damage
+      if(c.hp<c.maxHp){ const bw=Math.max(16,sz*1.7), bh=Math.max(3,sz*0.12), bx=sx-bw/2, by=cy-sz*1.55, fr=Math.max(0,c.hp/c.maxHp);
+        ctx.save();
+        ctx.fillStyle='rgba(0,0,0,0.6)'; ctx.fillRect(bx-1,by-1,bw+2,bh+2);
+        ctx.fillStyle = fr>0.5?'#5dff8f':fr>0.25?'#ffd23a':'#ff3b54'; ctx.fillRect(bx,by,bw*fr,bh);
+        ctx.strokeStyle='rgba(255,255,255,0.35)'; ctx.lineWidth=1; ctx.strokeRect(bx-1,by-1,bw+2,bh+2);
+        ctx.restore(); }
+    }
+    const _fx=fxBySeg[s.idx]; if(_fx){ for(const fn of _fx) fn(); }   // bolts/rockets/booms on this strip
+  }
+
+  // player car — drawn where the road actually is at the craft's visual depth (a few strips
+  // ahead). On a curve the road there has already bent, so following it makes the craft track
+  // the curve instead of sitting pinned to centre while the road slides past.
+  const bob=Math.sin(now/90)*1.2 + (speed/maxSpeed)*Math.sin(now/40);
+  let carX=W/2, carY=H*0.84+bob, curveYaw=0, groundCarY=carY, surfaceY=carY;
+  const carSeg=findSeg(pos+carCzR);
+  if(carSeg._f===frame && carSeg.p1.screen){
+    const sc=carSeg.p1.screen;
+    carX = sc.x + playerX*sc.w;                                   // craft moves sideways across the pipe
+    surfaceY = sc.y - sc.scale*bankLift(carSeg,playerX)*(W/2);    // the actual track surface under the craft (NO craft lift)
+    groundCarY = surfaceY - sc.scale*CRAFT_LIFT*(W/2) - 24 + bob; // where the craft body sits (floated by CRAFT_LIFT)
+    carY = groundCarY - sc.scale*airH*(W/2);                      // lift by air height (jumps/ramps)
+    curveYaw=carSeg.curve*0.05;
+  }
+  const aLift=Math.max(0, surfaceY-carY);    // pixels the craft floats above the real surface (lift + air) -> shrinks the shadow
+  if(!cockpit){
+  // ground shadow — sits on the track surface directly under the craft, big when low, shrinks as it climbs.
+  // Clamp to stay on screen (the road under you can dive below the bottom on a big drop).
+  const shY=Math.max(carY+10, Math.min(H-10, surfaceY));
+  ctx.save();
+  ctx.translate(carX, shY);
+  const shk=Math.max(0.42, 1/(1+aLift/170)) * (craftSize/42);
+  ctx.scale(shk,0.34*shk);
+  const shg=ctx.createRadialGradient(0,0,2,0,0,42);
+  shg.addColorStop(0,'rgba(0,0,0,'+(0.55*Math.max(0.35,shk)).toFixed(3)+')');
+  shg.addColorStop(0.7,'rgba(0,0,0,'+(0.28*Math.max(0.35,shk)).toFixed(3)+')');
+  shg.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=shg;
+  ctx.beginPath(); ctx.arc(0,0,42,0,Math.PI*2); ctx.fill();
+  ctx.restore();
+  draw3DCar(carX, carY + (landT>0?(landT/0.16)*5:0), craftSize, 285, true, steerVisual*0.125+curveYaw - playerX*0.12, bankAngleAt(playerX)*0.9, jetThrustL, jetThrustR, flapL, flapR);
+  }   // end !cockpit
+  if(!cockpit) drawWorldCannons();   // world guns for chase/far; cockpit paints its own fixed guns on the HUD layer
+
+  // (laser bolts, rockets and explosions are now drawn inside pass 2 above, so hills occlude them)
+
+  // speed streaks when boosting (fade out with the boost envelope)
+  if(boostEnv>0.04){
+    ctx.strokeStyle='rgba(157,255,58,'+(0.5*boostEnv).toFixed(2)+')'; ctx.lineWidth=2;
+    for(let i=0;i<10;i++){ const yy=Math.random()*H; ctx.beginPath();
+      ctx.moveTo(0,yy); ctx.lineTo(W*0.3*Math.random(),yy); ctx.stroke(); }
+  }
+  // coins arcing into the counter
+  if(coinFx.length){
+    ctx.save(); ctx.textAlign='center';
+    for(const c of coinFx){
+      const s=findSeg(c.z); if(!s||s._f!==frame||!s.p1.screen) continue;
+      const sc=s.p1.screen, bx=sc.x + c.u*sc.w, by=sc.y - sc.scale*bankLift(s,c.u)*(W/2);
+      const pr=c.t/c.dur, sca=Math.max(0.45, Math.min(2.2, sc.scale*1.3));
+      // flash at the moment of break
+      if(pr<0.22){ const fa=1-pr/0.22, r=44*sca, g=ctx.createRadialGradient(bx,by,0,bx,by,r);
+        g.addColorStop(0,'rgba(255,242,180,'+(0.6*fa).toFixed(3)+')'); g.addColorStop(1,'rgba(255,200,60,0)');
+        ctx.fillStyle=g; ctx.beginPath(); ctx.arc(bx,by,r,0,Math.PI*2); ctx.fill(); }
+      // coins bursting out + rising, fading
+      ctx.shadowColor='#ffae00'; ctx.shadowBlur=8;
+      for(const p of c.parts){ const spread=p.sp*58*sca*pr, rise=(p.rise*70+20)*sca*pr;
+        const px=bx+Math.cos(p.ang)*spread, py=by-rise-Math.sin(p.ang)*spread*0.25;
+        ctx.globalAlpha=Math.max(0,1-pr); ctx.fillStyle='#ffd23a';
+        ctx.beginPath(); ctx.arc(px,py,Math.max(1.5,4*sca*(1-0.3*pr)),0,Math.PI*2); ctx.fill(); }
+      ctx.globalAlpha=1;
+      // rising +N number, fades out
+      const ny=by-28*sca-72*sca*pr, na=pr<0.15? pr/0.15 : Math.max(0,1-(pr-0.15)/0.85);
+      ctx.globalAlpha=na; ctx.shadowColor='#ffae00'; ctx.shadowBlur=12;
+      ctx.fillStyle='#fff4b0'; ctx.font='900 '+Math.round(20*sca)+"px 'Orbitron',system-ui";
+      ctx.fillText('+'+c.n, bx, ny);
+      ctx.globalAlpha=1; ctx.shadowBlur=0;
+    }
+    ctx.restore();
+  }
+  // smash flash
+  if(hitFlashT>0){ ctx.save(); ctx.fillStyle='rgba(255,48,72,'+(Math.max(0,hitFlashT)/0.3*0.4)+')'; ctx.fillRect(0,0,W,H); ctx.restore(); }
+  if(cockpit){ ctx.restore(); drawCockpit(); drawCockpitGuns(); }
+}
+
+// cockpit overlay: a window you look out of, with a dashboard along the bottom and a thin canopy frame.
+// The road, bolts and the world-space cannons are drawn behind this (the cannons are the real guns now).
+function drawCockpit(){
+  ctx.save();
+  const dashTop=H*0.80;
+  // dashboard
+  ctx.beginPath();
+  ctx.moveTo(0,H); ctx.lineTo(0,dashTop+14);
+  ctx.quadraticCurveTo(W*0.5, dashTop-24, W, dashTop+14);
+  ctx.lineTo(W,H); ctx.closePath();
+  const g=ctx.createLinearGradient(0,dashTop-24,0,H);
+  g.addColorStop(0,'#2b3142'); g.addColorStop(0.18,'#191d29'); g.addColorStop(1,'#07090f');
+  ctx.fillStyle=g; ctx.fill();
+  ctx.strokeStyle='rgba(120,200,255,0.30)'; ctx.lineWidth=2; ctx.stroke();
+  // canopy frame (thin) — top + sides
+  ctx.fillStyle='rgba(12,16,26,0.96)';
+  const fw=Math.round(W*0.035), ft=Math.round(H*0.05);
+  ctx.fillRect(0,0,W,ft); ctx.fillRect(0,0,fw,dashTop); ctx.fillRect(W-fw,0,fw,dashTop);
+  ctx.strokeStyle='rgba(120,200,255,0.18)'; ctx.lineWidth=2;
+  ctx.strokeRect(fw,ft,W-2*fw,dashTop-ft);
+  ctx.restore();
+}
+
+// Overhead cockpit guns: the laser barrels are mounted on the canopy ROOF (top of screen), pointing
+// forward toward the down-track focal point — fixed cockpit dressing. The actual beams are the real
+// world bolts (drawBolt), so they curve along the track contour identically to every other view.
+function drawCockpitGuns(){
+  const n=Math.max(1,effCount());
+  const firing=laserL||laserR;
+  const topY=H*0.06, gap=W*0.055;     // muzzle anchor row (just under the top frame) + spacing
+  const blen=H*0.14;                  // how far the barrels hang down into the view
+  const aimX=W*0.5, aimY=H*0.42;      // forward focal point the barrels point toward
+  ctx.save();
+  for(let i=0;i<n;i++){
+    const bx=W*0.5+(i-(n-1)/2)*gap, by=topY;
+    const ang=Math.atan2(aimY-by, aimX-bx);
+    const bw=Math.max(5,W*0.009);
+    ctx.save(); ctx.translate(bx,by); ctx.rotate(ang-Math.PI/2);   // local -y points along the aim
+    // emitter box at the roof base, then the barrel running out to the muzzle
+    ctx.fillStyle='#2c3548'; ctx.strokeStyle='rgba(0,0,0,0.35)'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.rect(-bw*1.25,-blen*0.30,bw*2.5,blen*0.30); ctx.fill(); ctx.stroke();   // box
+    ctx.beginPath(); ctx.moveTo(-bw,-blen*0.30); ctx.lineTo(bw,-blen*0.30); ctx.lineTo(bw*0.62,-blen); ctx.lineTo(-bw*0.62,-blen); ctx.closePath();
+    ctx.fillStyle='#222a3a'; ctx.fill();                                                          // barrel body
+    ctx.fillStyle='rgba(74,87,110,0.9)'; ctx.fillRect(-bw,-blen*0.30,bw*0.55,blen*0.70-blen*0.30); // lit left face hint
+    ctx.strokeStyle='rgba(80,210,255,0.8)'; ctx.lineWidth=2; ctx.shadowColor='#39d0ff'; ctx.shadowBlur=5;
+    ctx.beginPath(); ctx.moveTo(0,-blen*0.34); ctx.lineTo(0,-blen*0.96); ctx.stroke();             // neon bore line
+    ctx.shadowBlur=0;
+    ctx.restore();
+    const tipX=bx+Math.cos(ang)*blen, tipY=by+Math.sin(ang)*blen;    // muzzle tip glows when firing
+    const heat=firing?1:0.22, r=Math.max(3,W*0.01);
+    ctx.save(); ctx.globalCompositeOperation='lighter';
+    const g=ctx.createRadialGradient(tipX,tipY,0,tipX,tipY,r);
+    g.addColorStop(0,'rgba(255,'+(215-150*heat)+','+(225-150*heat)+','+(0.55+0.4*heat).toFixed(2)+')');
+    g.addColorStop(0.55,'rgba(255,70,110,'+(0.3+0.45*heat).toFixed(2)+')');
+    g.addColorStop(1,'rgba(255,40,90,0)');
+    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(tipX,tipY,r,0,Math.PI*2); ctx.fill();
+    ctx.restore();
+  }
+  ctx.restore();
+}
+
+// a glowing breakable pillar; tilts to the road slope, casts a contact shadow, shatters when hit
+function drawObstacle(x,y,sz,o,ang){
+  const hue=o.hue;
+  sz*=(o.szMul||1)*targetSizeMul;   // red targets bigger than green, etc.
+  ctx.save();
+  ctx.translate(x,y);
+  ctx.rotate(ang||0);     // align everything to the local road slope
+  if(o.breakT>0){
+    const p=1-(o.breakT/0.55);          // 0..1 through the shatter
+    ctx.globalAlpha=Math.max(0,1-p);
+    ctx.shadowColor='hsl('+hue+',100%,65%)'; ctx.shadowBlur=sz*0.7;
+    for(let i=0;i<shardCount;i++){
+      const a=i/shardCount*Math.PI*2, r=sz*(0.3+p*2.6);
+      const fx=Math.cos(a)*r, fy=-sz*0.7+Math.sin(a)*r*0.7;
+      const fs=Math.max(1,sz*0.36*(1-p));
+      ctx.fillStyle='hsl('+hue+',100%,'+(58+p*22)+'%)';
+      ctx.fillRect(fx-fs/2, fy-fs/2, fs, fs);
+    }
+    ctx.restore(); return;
+  }
+  // contact shadow — a flattened dark ellipse on the ground, grounds the pillar
+  ctx.save(); ctx.shadowBlur=0; ctx.scale(1,0.32);
+  ctx.fillStyle='rgba(0,0,0,0.5)';
+  ctx.beginPath(); ctx.arc(0, 0, sz*1.1, 0, Math.PI*2); ctx.fill();
+  ctx.restore();
+  // pillar (base sits at origin, rises along -y which is now perpendicular to the slope)
+  ctx.globalAlpha=targetAlpha;
+  const h=sz*2.0, topY=-h;
+  ctx.shadowColor='hsl('+hue+',100%,60%)'; ctx.shadowBlur=sz*0.9;
+  ctx.beginPath();
+  ctx.moveTo(-sz*0.62,0); ctx.lineTo(sz*0.62,0);
+  ctx.lineTo(sz*0.42, topY+sz*0.55); ctx.lineTo(0, topY); ctx.lineTo(-sz*0.42, topY+sz*0.55);
+  ctx.closePath();
+  ctx.fillStyle='hsla('+hue+',90%,55%,0.30)'; ctx.fill();
+  ctx.strokeStyle='hsl('+hue+',100%,72%)'; ctx.lineWidth=Math.max(1,sz*0.13); ctx.stroke();
+  ctx.fillStyle='hsl('+hue+',100%,86%)';
+  ctx.beginPath(); ctx.arc(0, -h*0.5, Math.max(1,sz*0.27), 0, Math.PI*2); ctx.fill();
+  ctx.restore();
+}
+// ---- selectable sound banks (tuned in the TEST BENCH, used live in the race) ----
+let selShatter=1, selHit=1, shatterVol=0.35, hitVol=1.5;
+let sfxDest=null;                                   // when set, one-shot SFX route to this bus (volume control)
+let sfxPitch=1;                                     // when set, _ping scales its frequencies (pitch control)
+function _dest(){ return sfxDest || (audio && audio.master); }
+function applyVolumes(){ if(!audio) return; if(audio.shatterBus) audio.shatterBus.gain.value=shatterVol; if(audio.hitBus) audio.hitBus.gain.value=hitVol; if(audio.laserBus) audio.laserBus.gain.value=laserVol; }
+function _noise(dur,curve){ const c=audio.ctx, n=Math.floor(c.sampleRate*dur), b=c.createBuffer(1,n,c.sampleRate), d=b.getChannelData(0);
+  for(let i=0;i<n;i++){ const e=1-i/n; d[i]=(Math.random()*2-1)*(curve?Math.pow(e,curve):e); } const s=c.createBufferSource(); s.buffer=b; return s; }
+function _ping(type,f0,f1,t0,dur,gain){ const c=audio.ctx, o=c.createOscillator(), g=c.createGain(); o.type=type;
+  o.frequency.setValueAtTime(f0*sfxPitch,t0); if(f1) o.frequency.exponentialRampToValueAtTime(f1*sfxPitch,t0+dur);
+  g.gain.setValueAtTime(0.0001,t0); g.gain.exponentialRampToValueAtTime(gain,t0+0.004); g.gain.exponentialRampToValueAtTime(0.0005,t0+dur);
+  o.connect(g); g.connect(_dest()); o.start(t0); o.stop(t0+dur+0.02); }
+const shatterSamples=[
+  ()=>{ const c=audio.ctx,t=c.currentTime; [2600,3400,4300,5200].forEach((f,i)=>_ping('triangle',f*(0.97+Math.random()*0.06),null,t,0.22+i*0.04,0.11));
+    const s=_noise(0.16,2),hp=c.createBiquadFilter();hp.type='highpass';hp.frequency.value=2800;const g=c.createGain();g.gain.value=0.16;s.connect(hp);hp.connect(g);g.connect(_dest());s.start(t); },
+  ()=>{ const c=audio.ctx,t=c.currentTime; const s=_noise(0.32,1.4),bp=c.createBiquadFilter();bp.type='bandpass';bp.Q.value=1.2;
+    bp.frequency.setValueAtTime(5000,t);bp.frequency.exponentialRampToValueAtTime(700,t+0.3);const g=c.createGain();g.gain.setValueAtTime(0.4,t);g.gain.exponentialRampToValueAtTime(0.001,t+0.32);s.connect(bp);bp.connect(g);g.connect(_dest());s.start(t);
+    [3800,4700,6100].forEach((f,i)=>_ping('triangle',f,null,t+0.01+i*0.02,0.14,0.07)); },
+  ()=>{ const c=audio.ctx,t=c.currentTime; [1046,1568,2093,3136].forEach((f,i)=>_ping('sine',f,null,t,0.5-i*0.06,0.10/(i+1)+0.04));
+    const s=_noise(0.2,3),g=c.createGain();g.gain.setValueAtTime(0.14,t);g.gain.exponentialRampToValueAtTime(0.001,t+0.2);s.connect(g);g.connect(_dest());s.start(t+0.02); },
+  ()=>{ const c=audio.ctx,t=c.currentTime; const s=_noise(0.05,0.5),g=c.createGain();g.gain.value=0.4;s.connect(g);g.connect(_dest());s.start(t);
+    _ping('sawtooth',1400,300,t,0.16,0.12); [5200,6400,7600].forEach((f,i)=>_ping('sine',f,null,t+0.04+i*0.03,0.1,0.05)); },
+  ()=>{ const c=audio.ctx,t=c.currentTime; [3000,2400,1900,1500,1150].forEach((f,i)=>_ping('triangle',f,null,t+i*0.025,0.3,0.09));
+    const s=_noise(0.12,2),hp=c.createBiquadFilter();hp.type='highpass';hp.frequency.value=3500;const g=c.createGain();g.gain.value=0.1;s.connect(hp);hp.connect(g);g.connect(_dest());s.start(t); },
+];
+const hitSamples=[
+  ()=>{ const t=audio.ctx.currentTime; _ping('triangle',780,520,t,0.1,0.12); _ping('triangle',1100,820,t,0.08,0.06); },
+  ()=>{ const c=audio.ctx,t=c.currentTime; _ping('sine',300,180,t,0.12,0.18); const s=_noise(0.05,1.5),lp=c.createBiquadFilter();lp.type='lowpass';lp.frequency.value=1200;const g=c.createGain();g.gain.value=0.12;s.connect(lp);lp.connect(g);g.connect(_dest());s.start(t); },
+  ()=>{ const c=audio.ctx,t=c.currentTime; const s=_noise(0.08,2),bp=c.createBiquadFilter();bp.type='bandpass';bp.Q.value=4;bp.frequency.value=820;const g=c.createGain();g.gain.setValueAtTime(0.32,t);g.gain.exponentialRampToValueAtTime(0.001,t+0.09);s.connect(bp);bp.connect(g);g.connect(_dest());s.start(t); _ping('triangle',900,null,t,0.06,0.05); },
+  ()=>{ const c=audio.ctx,t=c.currentTime; _ping('square',480,420,t,0.07,0.10); const s=_noise(0.03,0.6),g=c.createGain();g.gain.value=0.1;s.connect(g);g.connect(_dest());s.start(t); },
+  ()=>{ const t=audio.ctx.currentTime; _ping('triangle',680,null,t,0.12,0.11); _ping('triangle',510,null,t+0.015,0.14,0.08); },
+];
+function shatterSound(){ if(!audio) return; sfxDest=audio.shatterBus||audio.master; shatterSamples[selShatter](); sfxDest=null; }
+function hitSound(){ if(!audio) return; sfxDest=audio.hitBus||audio.master; hitSamples[selHit](); sfxDest=null; }
+function coinSound(){
+  if(!audio) return; const c=audio.ctx, t=c.currentTime;
+  const o=c.createOscillator(), g=c.createGain();
+  o.type='square'; o.frequency.setValueAtTime(1250,t); o.frequency.setValueAtTime(1760,t+0.04);
+  g.gain.setValueAtTime(0.05,t); g.gain.exponentialRampToValueAtTime(0.0004,t+0.11);
+  o.connect(g); g.connect(_dest()); o.start(t); o.stop(t+0.13);
+}
+function jumpSound(){
+  if(!audio) return; const c=audio.ctx, t=c.currentTime;
+  const o=c.createOscillator(), g=c.createGain();
+  o.type='triangle'; o.frequency.setValueAtTime(240,t); o.frequency.exponentialRampToValueAtTime(900,t+0.17);
+  g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(0.16,t+0.02); g.gain.exponentialRampToValueAtTime(0.0005,t+0.22);
+  o.connect(g); g.connect(_dest()); o.start(t); o.stop(t+0.24);
+}
+function rocketLaunchSound(){ if(!audio) return; const c=audio.ctx,t=c.currentTime;
+  const s=_noise(0.18,1), bp=c.createBiquadFilter(); bp.type='bandpass'; bp.Q.value=0.8;
+  bp.frequency.setValueAtTime(300,t); bp.frequency.exponentialRampToValueAtTime(1800,t+0.16);
+  const g=c.createGain(); g.gain.setValueAtTime(0.18,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.18);
+  s.connect(bp); bp.connect(g); g.connect(audio.master); s.start(t);
+}
+function explosionSound(){ if(!audio) return; const c=audio.ctx,t=c.currentTime;
+  const s=_noise(0.5,1.5), lp=c.createBiquadFilter(); lp.type='lowpass';
+  lp.frequency.setValueAtTime(1400,t); lp.frequency.exponentialRampToValueAtTime(200,t+0.4);
+  const g=c.createGain(); g.gain.setValueAtTime(0.5,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.5);
+  s.connect(lp); lp.connect(g); g.connect(audio.master); s.start(t);
+  const o=c.createOscillator(), og=c.createGain(); o.type='sine';
+  o.frequency.setValueAtTime(160,t); o.frequency.exponentialRampToValueAtTime(45,t+0.4);
+  og.gain.setValueAtTime(0.5,t); og.gain.exponentialRampToValueAtTime(0.001,t+0.45);
+  o.connect(og); og.connect(audio.master); o.start(t); o.stop(t+0.48);
+}
+function spawnCoins(o){
+  // bank the coins instantly, then play a quick world-anchored "pop": a flash, a small burst of
+  // coins, and a rising +N that fades — like a soul leaving the body, fast (you drive past quick).
+  coinCount += o.value; coinPop=Math.min(1,coinPop+0.5); coinSound(); saveUpg();
+  const np=Math.max(3,Math.min(10,o.value)), parts=[];
+  for(let i=0;i<np;i++) parts.push({ang:-Math.PI/2+(Math.random()-0.5)*1.9, sp:0.6+Math.random()*1.0, rise:0.5+Math.random()*0.8});
+  coinFx.push({z:o.z, u:o.u, n:o.value, t:0, dur:0.7, parts});
+}
+const laserSamples=[
+  ()=>{ _ping('sawtooth',1200,260,audio.ctx.currentTime,0.13,0.20); },
+  ()=>{ const c=audio.ctx,t=c.currentTime; _ping('square',1800,400,t,0.09,0.16);
+    const s=_noise(0.04,1),g=c.createGain();g.gain.value=0.06;s.connect(g);g.connect(_dest());s.start(t); },
+  ()=>{ _ping('sawtooth',700,120,audio.ctx.currentTime,0.18,0.20); },
+  ()=>{ const t=audio.ctx.currentTime; _ping('sawtooth',1500,500,t,0.10,0.14); _ping('sine',2600,900,t,0.10,0.06); },
+  ()=>{ const c=audio.ctx,t=c.currentTime; _ping('triangle',1000,640,t,0.07,0.16);
+    const s=_noise(0.03,0.6),g=c.createGain();g.gain.value=0.08;s.connect(g);g.connect(_dest());s.start(t); },
+];
+function laserSound(){ if(!audio) return; sfxDest=audio.laserBus||audio.master; sfxPitch=laserPitch; laserSamples[selLaser](); sfxPitch=1; sfxDest=null; }
+function crunchSound(){
+  if(!audio) return; const ctx2=audio.ctx, t=ctx2.currentTime;
+  const buf=ctx2.createBuffer(1,Math.floor(ctx2.sampleRate*0.25),ctx2.sampleRate), d=buf.getChannelData(0);
+  for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/d.length,2);
+  const src=ctx2.createBufferSource(); src.buffer=buf;
+  const bp=ctx2.createBiquadFilter(); bp.type='bandpass'; bp.Q.value=0.8;
+  bp.frequency.setValueAtTime(1500,t); bp.frequency.exponentialRampToValueAtTime(170,t+0.22);
+  const g=ctx2.createGain(); g.gain.value=0.5; g.gain.setTargetAtTime(0,t+0.05,0.08);
+  src.connect(bp); bp.connect(g); g.connect(_dest()); src.start();
+}
+
+// draw one road segment as a curved cross-section (a strip of quads across U_BANDS)
+const SMOOTH_SUB=1, SMOOTH_DIST=150;   // near strips split into this many sub-quads for a smooth (un-faceted) surface
+function catmull(p0,p1,p2,p3,t){ const t2=t*t,t3=t2*t;
+  return 0.5*((2*p1)+(-p0+p2)*t+(2*p0-5*p1+4*p2-p3)*t2+(-p0+3*p1-3*p2+p3)*t3); }
+function drawBandedSeg(idx,n, scN,scF, camX0N,camX0F, segYN,segYF, camYbase, gap){
+  if(gap===1) return;                 // full hole — draw nothing, the void shows through
+  const dark = Math.floor(idx/rumbleLen)%2;
+  const baseRoad = dark? COL.darkRoad:COL.lightRoad;
+  const isFinish = idx<3;
+  const fogT = n>drawDist*0.72 ? Math.min(0.5,(n-drawDist*0.72)/(drawDist*0.28)) : 0;
+  const N=U_BANDS.length, L=segs.length;
+  let lo=0, hi=N-1;
+  if(gap===2) lo=U_CENTER;            // left half is a hole -> draw the right half only
+  else if(gap===3) hi=U_CENTER;       // right half is a hole -> draw the left half only
+  const segF=segs[(idx+1)%L];
+  const yFlatN=(segs[idx]&&segs[idx].yFlat!=null)?segs[idx].yFlat:segYN, yFlatF=(segF&&segF.yFlat!=null)?segF.yFlat:segYF;
+  // sample the cross-section profile at near & far (U_BANDS are just spline control points now)
+  const nx=new Array(N),ny=new Array(N),fx=new Array(N),fy=new Array(N);
+  for(let i=0;i<N;i++){ const u=U_BANDS[i], h=bankH(u), ef=edgeFlat(u);
+    const yN=segYN+(yFlatN-segYN)*ef, yF=segYF+(yFlatF-segYF)*ef;
+    nx[i]=W/2+scN*(u*roadW+camX0N)*W/2; ny[i]=H/2-scN*(yN+h-camYbase)*W/2;
+    fx[i]=W/2+scF*(u*roadW+camX0F)*W/2; fy[i]=H/2-scF*(yF+h-camYbase)*W/2;
+    // push the far edge ~1px further from the near edge so it overlaps the strip behind it (seals the seam)
+    const dvx=fx[i]-nx[i], dvy=fy[i]-ny[i], dl=Math.hypot(dvx,dvy)||1;
+    fx[i]+=dvx/dl; fy[i]+=dvy/dl;
+  }
+  // one smooth filled shape over [lo..hi]: spline along the near edge, across to the far edge, spline back
+  ctx.beginPath();
+  ctx.moveTo(nx[lo],ny[lo]);
+  for(let i=lo+1;i<hi;i++) ctx.quadraticCurveTo(nx[i],ny[i],(nx[i]+nx[i+1])/2,(ny[i]+ny[i+1])/2);
+  ctx.quadraticCurveTo(nx[hi-1],ny[hi-1],nx[hi],ny[hi]);
+  ctx.lineTo(fx[hi],fy[hi]);
+  for(let i=hi-1;i>lo;i--) ctx.quadraticCurveTo(fx[i],fy[i],(fx[i]+fx[i-1])/2,(fy[i]+fy[i-1])/2);
+  ctx.quadraticCurveTo(fx[lo+1],fy[lo+1],fx[lo],fy[lo]);
+  ctx.closePath();
+  if(isFinish){
+    ctx.fillStyle=(idx%2)?'#e8e8f0':'#20203a'; ctx.fill();
+  } else {
+    // shading runs dark(rails) -> bright(centre); a smooth gradient instead of stepped bands
+    let minX=Math.min(nx[lo],nx[hi]), maxX=Math.max(nx[lo],nx[hi]); if(maxX-minX<1) maxX=minX+1;
+    const grad=ctx.createLinearGradient(minX,0,maxX,0);
+    for(const u of [-1.8,-1.2,-0.6,0,0.6,1.2,1.8]){ const sx=W/2+scN*(u*roadW+camX0N)*W/2;
+      let p=(sx-minX)/(maxX-minX); p=p<0?0:p>1?1:p;
+      let col=shadeHex(baseRoad,1-0.22*Math.abs(u)); if(fogT>0) col=fogHex2(col,fogT);
+      grad.addColorStop(p,col); }
+    ctx.fillStyle=grad; ctx.fill();
+  }
+  // neon rails + centreline (lengthwise lines). For a half-gap, the hole edge gets a warning stripe.
+  if(!isFinish){
+    const railA = fogT>0 ? (1-fogT) : 1;
+    const railCol = (dark?'rgba(0,255,255,':'rgba(255,43,143,')+railA+')';
+    const ln=(bi,style,w)=>{ ctx.strokeStyle=style; ctx.lineWidth=w; ctx.beginPath(); ctx.moveTo(nx[bi],ny[bi]); ctx.lineTo(fx[bi],fy[bi]); ctx.stroke(); };
+    if(gap===0){
+      ln(U_RAIL_L, railCol, 2.2); ln(U_RAIL_R, railCol, 2.2);
+      ln(U_CENTER, 'rgba(0,255,255,'+(0.45*railA)+')', 1.4);
+    } else {
+      ln(gap===2?U_RAIL_R:U_RAIL_L, railCol, 2.2);     // outer rail of the surviving side
+      ln(U_CENTER, 'rgba(255,196,0,'+railA+')', 3);     // hole edge — amber warning stripe
+    }
+  }
+}
+// fog blend that accepts rgb() or #hex strings
+function fogHex2(c,t){
+  let r,g,b;
+  if(c[0]==='#'){ const a=hexRGB(c); r=a[0];g=a[1];b=a[2]; }
+  else { const m=c.match(/\d+/g); r=+m[0];g=+m[1];b=+m[2]; }
+  return 'rgb('+(r+(58-r)*t|0)+','+(g+(18-g)*t|0)+','+(b+(89-b)*t|0)+')';
+}
+
+// ---- low-poly 3D vehicle: rectangular body + a cylinder (jet) on each side ----
+// local space: x=right, y=up, z=forward (camera behind at -z, slightly above)
+const JET_R=0.30;   // jet cylinder radius (bigger pods)
+const VEH=(function(){
+  const V=[], F=[];
+  const bx=0.40, by=0.20, bz=0.95;
+  V.push([-bx,-by,-bz],[bx,-by,-bz],[bx,-by,bz],[-bx,-by,bz],   //0-3 bottom
+         [-bx, by,-bz],[bx, by,-bz],[bx, by,bz],[-bx, by,bz]);  //4-7 top
+  F.push({v:[0,1,2,3],r:'dark'},{v:[7,6,5,4],r:'top'},{v:[3,2,6,7],r:'body'},
+         {v:[0,4,5,1],r:'rear'},{v:[0,3,7,4],r:'side'},{v:[1,5,6,2],r:'side'});
+  const jr=JET_R, jzr=-1.0, jzf=0.5, S=6, rears=[];
+  function addJet(cx){
+    const base=V.length;
+    for(let s=0;s<S;s++){const a=s/S*Math.PI*2+Math.PI/6; V.push([cx+jr*Math.cos(a),jr*Math.sin(a),jzr]);} // rear ring
+    for(let s=0;s<S;s++){const a=s/S*Math.PI*2+Math.PI/6; V.push([cx+jr*Math.cos(a),jr*Math.sin(a),jzf]);} // front ring
+    for(let s=0;s<S;s++){const n=(s+1)%S; F.push({v:[base+s,base+n,base+S+n,base+S+s],r:'jet'});}
+    F.push({v:[base+S,base+S+1,base+S+2,base+S+3,base+S+4,base+S+5],r:'jetcap'});      // front nose cap
+    F.push({v:[base+5,base+4,base+3,base+2,base+1,base+0],r:'jetrear'});               // rear exhaust ring
+    rears.push([cx,0,jzr]);
+  }
+  addJet(-(bx+jr*0.9));  // LEFT jet
+  addJet( (bx+jr*0.9));  // RIGHT jet
+  return {V,F, rearL:rears[0], rearR:rears[1]};
+})();
+const LIGHT=(()=>{const l=[-0.5,-0.85,-0.35];const m=Math.hypot(...l);return l.map(v=>v/m);})();
+function roleColor(role){
+  const map={ body:[0,72,52], side:[0,72,40], dark:[0,72,22], rear:[0,72,32], top:[0,60,60],
+              jet:[0,10,52], jetcap:[0,8,64], jetrear:[0,6,16],
+              gunTop:[0,10,66], gun:[0,10,48], gunDark:[0,10,26], barrel:[0,7,44], bore:[0,55,26] };
+  return map[role]||map.body;
+}
+// ---- WORLD-SPACE laser cannons ----
+// The cannons live in the same camera as the road and the bolts (not as part of the billboard sprite),
+// mounted at the craft's actual lane, laser height and depth. Because a cannon's muzzle is projected the
+// exact same way a bolt's origin is (same segment, same lane, same height), the gun and its beam are one
+// rigid system: move/steer/bank and they stay welded together, in every view. P() projects a craft point
+// (lane, world-height-above-road, depth-ahead) through the world camera; bankLift gives the surface tilt.
+function drawWorldCannons(){
+  const Dc=camDepth*camHeight*(W*0.5)/(0.34*H);     // craft's depth ahead of the camera
+  const nose=Dc+segLen*2.2;                          // muzzle depth == the bolts' near origin
+  const ax=laserLift()+airH;                         // barrel axis height (== bolt height; +airH so guns rise with jumps)
+  const P=(lane,h,d)=>{ const s=findSeg(pos+d); if(!(s&&s._f===frame&&s.p1&&s.p1.screen)) return null;
+    const sc=s.p1.screen; return {x: sc.x + lane*sc.w, y: sc.y - sc.scale*(bankLift(s,lane)+h)*(W/2)}; };
+  const quad=(a,b,c,d,style)=>{ if(!a||!b||!c||!d) return; ctx.beginPath();
+    ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.lineTo(c.x,c.y); ctx.lineTo(d.x,d.y); ctx.closePath();
+    ctx.fillStyle=style; ctx.fill(); ctx.strokeStyle='rgba(0,0,0,0.30)'; ctx.lineWidth=0.8; ctx.stroke(); };
+  const firing=laserL||laserR;
+  const lw=0.016, hh=52, bw=0.008, bhh=26;           // box half-width(lane)/half-height(world); barrel half sizes
+  const dBack=Dc+segLen*0.15, dBoxF=Dc+segLen*1.05;  // emitter box span; barrel runs dBoxF -> nose
+  for(const o of laserLanes(Math.max(1,effCount()))){
+    const L=playerX+o;
+    // barrel first (it's the far end), then the box over its base, so nearer bits paint last
+    quad(P(L-bw,ax+bhh,dBoxF),P(L+bw,ax+bhh,dBoxF),P(L+bw,ax+bhh,nose),P(L-bw,ax+bhh,nose),'#4a576e'); // barrel top
+    quad(P(L-bw,ax+bhh,dBoxF),P(L-bw,ax+bhh,nose),P(L-bw,ax-bhh,nose),P(L-bw,ax-bhh,dBoxF),'#323c50'); // barrel left
+    quad(P(L+bw,ax+bhh,dBoxF),P(L+bw,ax+bhh,nose),P(L+bw,ax-bhh,nose),P(L+bw,ax-bhh,dBoxF),'#262e3d'); // barrel right
+    quad(P(L-bw,ax-bhh,dBoxF),P(L+bw,ax-bhh,dBoxF),P(L+bw,ax-bhh,nose),P(L-bw,ax-bhh,nose),'#1c2330'); // barrel bottom
+    quad(P(L-lw,ax+hh,dBack),P(L+lw,ax+hh,dBack),P(L+lw,ax+hh,dBoxF),P(L-lw,ax+hh,dBoxF),'#3c4659');   // box top
+    quad(P(L-lw,ax+hh,dBack),P(L-lw,ax+hh,dBoxF),P(L-lw,ax-hh,dBoxF),P(L-lw,ax-hh,dBack),'#2c3548');   // box left
+    quad(P(L+lw,ax+hh,dBack),P(L+lw,ax+hh,dBoxF),P(L+lw,ax-hh,dBoxF),P(L+lw,ax-hh,dBack),'#222a3a');   // box right
+    quad(P(L-lw,ax+hh,dBoxF),P(L+lw,ax+hh,dBoxF),P(L+lw,ax-hh,dBoxF),P(L-lw,ax-hh,dBoxF),'#48566d');   // box front
+    // neon accent line along the barrel + glowing bore at the muzzle (hot when firing)
+    const sp0=P(L,ax+bhh*0.6,dBoxF), sp1=P(L,ax+bhh*0.6,nose);
+    if(sp0&&sp1){ ctx.strokeStyle='rgba(80,210,255,0.85)'; ctx.lineWidth=2; ctx.shadowColor='#39d0ff'; ctx.shadowBlur=6;
+      ctx.beginPath(); ctx.moveTo(sp0.x,sp0.y); ctx.lineTo(sp1.x,sp1.y); ctx.stroke(); ctx.shadowBlur=0; }
+    const m=P(L,ax,nose), me=P(L+bw,ax,nose);
+    if(m){ const r=Math.max(2.5,(me?Math.abs(me.x-m.x):4)*1.7), heat=firing?1:0.2;
+      const g=ctx.createRadialGradient(m.x,m.y,0,m.x,m.y,r);
+      g.addColorStop(0,'rgba(255,'+(215-150*heat)+','+(225-150*heat)+','+(0.55+0.4*heat).toFixed(2)+')');
+      g.addColorStop(0.55,'rgba(255,70,110,'+(0.3+0.45*heat).toFixed(2)+')');
+      g.addColorStop(1,'rgba(255,40,90,0)');
+      ctx.save(); ctx.globalCompositeOperation='lighter'; ctx.fillStyle=g;
+      ctx.beginPath(); ctx.arc(m.x,m.y,r,0,Math.PI*2); ctx.fill(); ctx.restore(); }
+  }
+}
+function draw3DCar(cx,cy,size,hue,player,yaw,bankRoll,jetL,jetR,flpL,flpR){
+  jetL=jetL||0; jetR=jetR||0; flpL=flpL||0; flpR=flpR||0;
+  const cyw=Math.cos(yaw),syw=Math.sin(yaw);
+  const roll=(player?-yaw*0.4:0)+(bankRoll||0), cr=Math.cos(roll),sr=Math.sin(roll);
+  const nu=0.48, cnu=Math.cos(nu), snu=Math.sin(nu);          // model nose-up tilt (front rides high)
+  const pitch=0.18, cp=Math.cos(pitch),sp=Math.sin(pitch);   // camera looks slightly down (see the top)
+  const cam=3.6, focal=3.4;
+  function tx(x,y,z){
+    let y0=y*cnu+z*snu, z0=-y*snu+z*cnu;               // nose-up (front z+ lifts)
+    let x1=x*cyw+z0*syw, z1=-x*syw+z0*cyw, y1=y0;      // yaw
+    let x2=x1*cr-y1*sr, y2=x1*sr+y1*cr, z2=z1;         // roll
+    let y3=y2*cp-z2*sp, z3=y2*sp+z2*cp, x3=x2;         // camera pitch
+    const f=focal/(z3+cam);
+    return {sx:cx+x3*f*size, sy:cy-y3*f*size, X:x3,Y:y3,Z:z3};
+  }
+  const proj=VEH.V.map(v=>tx(v[0],v[1],v[2]));
+  // shadow
+  ctx.fillStyle='rgba(0,0,0,.38)';
+  ctx.beginPath(); ctx.ellipse(cx,cy+size*0.45,size*0.9,size*0.28,0,0,7); ctx.fill();
+  // flames: a true 3D plume shooting backward (−z) out of each jet's rear, so it
+  // follows the craft's orientation instead of pointing straight down the screen.
+  function flame(rear,thrust){
+    if(thrust<0.03) return;
+    const bst = player ? boostEnv : 0;                       // boost envelope (eased) drives colour + size
+    const sizeMul = 1 + 0.45*bst;                            // bigger plume under boost
+    const cx0=rear[0], jr=JET_R, lipw=jr*0.7*(1+0.3*bst);
+    // length ramps up with a curve, but a hard ceiling keeps the tip in front of the camera
+    // (rear z is -1.0, camera at 3.6 -> anything past ~2 wraps out the front). Boost lifts the ceiling slightly.
+    const tc=Math.pow(thrust,1.7), lenMax=1.55+0.4*bst;
+    const len=Math.min(lenMax,(0.06+1.9*tc)*(0.85+0.3*Math.random())*sizeMul);
+    const bL=tx(cx0-lipw,0,rear[2]);        // rear lip, left
+    const bR=tx(cx0+lipw,0,rear[2]);        // rear lip, right
+    const tip=tx(cx0,0,rear[2]-len);        // plume tip, further back
+    // colour: orange normally, easing to blue as boost ramps in/out
+    const mr=Math.round(255+(90-255)*bst), mg=Math.round(140+(165-140)*bst), mb=Math.round(40+(255-40)*bst);
+    const mid=mr+','+mg+','+mb;
+    const g=ctx.createLinearGradient((bL.sx+bR.sx)/2,(bL.sy+bR.sy)/2,tip.sx,tip.sy);
+    g.addColorStop(0,   'rgba(255,255,255,0.92)');           // white-hot core
+    g.addColorStop(0.22,'rgba('+mid+',0.6)');
+    g.addColorStop(0.55,'rgba('+mid+',0.32)');
+    g.addColorStop(0.8, 'rgba('+mid+',0.12)');
+    g.addColorStop(1,   'rgba('+mid+',0)');                  // feathers out
+    ctx.save();
+    ctx.globalCompositeOperation='lighter';     // additive -> soft glowy feather
+    ctx.fillStyle=g;
+    ctx.beginPath(); ctx.moveTo(bL.sx,bL.sy); ctx.lineTo(bR.sx,bR.sy);
+    ctx.lineTo(tip.sx,tip.sy); ctx.closePath(); ctx.fill();
+    // near top speed, layer a hot inner plume on top that glows in (no hard outline)
+    const heat=Math.max(0,Math.min(1,(thrust-0.78)/0.22));
+    if(heat>0.02){
+      const itip=tx(cx0,0,rear[2]-len*0.6);
+      const hg2=Math.round(245-70*bst), hb2=Math.round(150+105*bst);   // hot yellow-white, whiter-blue under boost
+      const ig=ctx.createLinearGradient((bL.sx+bR.sx)/2,(bL.sy+bR.sy)/2,itip.sx,itip.sy);
+      ig.addColorStop(0,  'rgba(255,255,255,'+(0.95*heat).toFixed(3)+')');
+      ig.addColorStop(0.5,'rgba(255,'+hg2+','+hb2+','+(0.6*heat).toFixed(3)+')');
+      ig.addColorStop(1,  'rgba(255,'+hg2+','+hb2+',0)');
+      ctx.fillStyle=ig;
+      ctx.beginPath(); ctx.moveTo(bL.sx,bL.sy); ctx.lineTo(bR.sx,bR.sy);
+      ctx.lineTo(itip.sx,itip.sy); ctx.closePath(); ctx.fill();
+    }
+    ctx.restore();
+  }
+  // glowing inset exhaust cap on the back of each jet cylinder (colour matches the plume)
+  function capGlow(rear,thrust){
+    if(thrust<0.03) return;
+    const bst=player?boostEnv:0;
+    const cx0=rear[0], rr=JET_R*0.74;                 // inset inside the shell rim
+    const N=8, P=[];
+    for(let i=0;i<N;i++){ const a=Math.PI*2*(i+0.5)/N; P.push(tx(cx0+rr*Math.cos(a),rr*Math.sin(a),rear[2])); }
+    const cen=tx(cx0,0,rear[2]);
+    const mr=Math.round(255+(90-255)*bst), mg=Math.round(140+(165-140)*bst), mb=Math.round(40+(255-40)*bst);
+    let maxR=2; for(const q of P) maxR=Math.max(maxR,Math.hypot(q.sx-cen.sx,q.sy-cen.sy));
+    const a=0.55+0.4*thrust;
+    const rg=ctx.createRadialGradient(cen.sx,cen.sy,0,cen.sx,cen.sy,maxR);
+    rg.addColorStop(0,   'rgba(255,255,255,'+(0.95*a).toFixed(3)+')');
+    rg.addColorStop(0.55,'rgba('+mr+','+mg+','+mb+','+(0.8*a).toFixed(3)+')');
+    rg.addColorStop(1,   'rgba('+mr+','+mg+','+mb+',0)');
+    ctx.save(); ctx.globalCompositeOperation='lighter'; ctx.fillStyle=rg;
+    ctx.beginPath(); ctx.moveTo(P[0].sx,P[0].sy);
+    for(let i=1;i<N;i++) ctx.lineTo(P[i].sx,P[i].sy);
+    ctx.closePath(); ctx.fill(); ctx.restore();
+  }
+  // faces, painter's-sorted with flat shading
+  const faces=VEH.F.map(face=>{
+    const p=face.v.map(i=>proj[i]);
+    const a=p[0],b=p[1],c=p[2];
+    let nx=(b.Y-a.Y)*(c.Z-a.Z)-(b.Z-a.Z)*(c.Y-a.Y);
+    let ny=(b.Z-a.Z)*(c.X-a.X)-(b.X-a.X)*(c.Z-a.Z);
+    let nz=(b.X-a.X)*(c.Y-a.Y)-(b.Y-a.Y)*(c.X-a.X);
+    const nm=Math.hypot(nx,ny,nz)||1; nx/=nm;ny/=nm;nz/=nm;
+    if(nz>0){nx=-nx;ny=-ny;nz=-nz;}
+    const d=Math.max(0,-(nx*LIGHT[0]+ny*LIGHT[1]+nz*LIGHT[2]));
+    const lum=Math.min(1.25,0.5+0.7*d);
+    const z=p.reduce((s,q)=>s+q.Z,0)/p.length;
+    return {p,role:face.r,lum,z};
+  });
+  faces.sort((A,B)=>B.z-A.z);
+  for(const fc of faces){
+    const [hOff,s,l]=roleColor(fc.role);
+    ctx.fillStyle=`hsl(${hue+hOff},${s}%,${Math.min(92,l*fc.lum)}%)`;
+    ctx.beginPath(); ctx.moveTo(fc.p[0].sx,fc.p[0].sy);
+    for(let i=1;i<fc.p.length;i++) ctx.lineTo(fc.p[i].sx,fc.p[i].sy);
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle='rgba(0,0,0,.28)'; ctx.lineWidth=0.6; ctx.stroke();
+  }
+  // exhaust over the body so it reads as coming out of the back caps, not from underneath
+  capGlow(VEH.rearL,jetL); flame(VEH.rearL,jetL);
+  capGlow(VEH.rearR,jetR); flame(VEH.rearR,jetR);
+  // airbrake flaps: a small panel hinged at the front of each jet whose rear edge
+  // lifts as you pull that pad back (small travel). Drawn last, on top.
+  function airflap(cx0, deploy){
+    if(deploy<0.02) return;
+    const jr=JET_R, lift=deploy*0.42;
+    const hL=tx(cx0-jr*0.7, jr*0.85, -0.45);          // hinge (front), low
+    const hR=tx(cx0+jr*0.7, jr*0.85, -0.45);
+    const fL=tx(cx0-jr*0.7, jr*0.85+lift, -1.0);      // free edge (rear), lifted
+    const fR=tx(cx0+jr*0.7, jr*0.85+lift, -1.0);
+    ctx.fillStyle='rgba(235,240,255,0.92)';
+    ctx.beginPath(); ctx.moveTo(hL.sx,hL.sy); ctx.lineTo(hR.sx,hR.sy);
+    ctx.lineTo(fR.sx,fR.sy); ctx.lineTo(fL.sx,fL.sy); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle='rgba(255,80,80,0.9)'; ctx.lineWidth=1; ctx.stroke();
+  }
+  airflap(VEH.rearL[0], flpL); airflap(VEH.rearR[0], flpR);
+}
+
+// ---- loop ----
+let last=performance.now();
+let _fireGlyphN=-1;
+function syncFireGlyph(){ const n=effCount(); if(n===_fireGlyphN) return; _fireGlyphN=n;
+  const g=document.getElementById('fireGlyph'); if(!g) return;
+  g.innerHTML=''; for(let i=0;i<n;i++){ const b=document.createElement('div'); b.className='fbar'; g.appendChild(b); } }   // red bars = live beam count, drawn (no text => no selection handles), size-sensing untouched
+function loop(t){
+  now=t; const dt=Math.min(0.05,(t-last)/1000); last=t;
+  update(dt);
+  syncFireGlyph();
+  if(state!=='play' && state!=='test') silenceEngine();   // keep the jet whine alive in the bench so it can be auditioned
+  render();
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
