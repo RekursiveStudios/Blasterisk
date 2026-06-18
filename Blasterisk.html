@@ -3,7 +3,25 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>NERVE — v3.36</title>
+<title>BLASTERISK — v3.38</title>
+
+<!-- ===== Link preview (Reddit / Discord / Twitter / iMessage) ===== -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Blasterisk">
+<meta property="og:title" content="Blasterisk">
+<meta property="og:description" content="Hover-race neon valleys at full tilt — laser cannons, homing rockets, rival craft. Blast your way to first.">
+<meta property="og:url" content="https://blasterisk.pages.dev/">
+<meta property="og:image" content="https://blasterisk.pages.dev/preview.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:type" content="image/jpeg">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Blasterisk">
+<meta name="twitter:description" content="Hover-race neon valleys at full tilt — laser cannons, homing rockets, rival craft. Blast your way to first.">
+<meta name="twitter:image" content="https://blasterisk.pages.dev/preview.jpg">
+<meta name="theme-color" content="#0a0612">
+<!-- =============================================================== -->
+
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@600;700&display=swap');
 
@@ -298,7 +316,7 @@
     <div id="moveTxt"></div>
   </div>
 
-  <div id="rotate"><div><span class="ic">⟳</span>ROTATE TO LANDSCAPE<br><span style="font-size:12px;color:#9dff3a;letter-spacing:1px;font-weight:400">NERVE plays sideways</span></div></div>
+  <div id="rotate"><div><span class="ic">⟳</span>ROTATE TO LANDSCAPE<br><span style="font-size:12px;color:#9dff3a;letter-spacing:1px;font-weight:400">BLASTERISK plays sideways</span></div></div>
   <div id="tuner">
     <button id="menuBtn">‹ MENU</button>
     <button id="obsToggle">OBST ON</button>
@@ -321,7 +339,7 @@
   <div id="rocketWrap"><div id="rktRing"></div><button id="rocketBtn">🚀<span id="rktAmmo">6</span></button></div>
 
   <div id="start">
-    <h1>NERVE</h1>
+    <h1>BLASTERISK</h1>
     <p>HOW HARD DO YOU DARE PRESS?</p>
     <button id="mapBtn">◄ MAP ►</button>
     <button id="playBtn">START RACE</button>
@@ -563,11 +581,11 @@
 
 <script>
 // ============================================================
-//  NERVE — pressure-steer arcade racer
-//  VERSION 3.36   (bump by 0.01 each new version)
+//  BLASTERISK — pressure-steer arcade racer
+//  VERSION 3.38   (bump by 0.01 each new version)
 // ============================================================
-const VERSION = '3.36';
-document.title = 'NERVE — v' + VERSION;
+const VERSION = '3.38';
+document.title = 'BLASTERISK — v' + VERSION;
 const _ver = document.getElementById('ver'); if(_ver) _ver.textContent = 'v' + VERSION;
 
 // ---- kill the mobile URL bar: real fullscreen on first touch ----
